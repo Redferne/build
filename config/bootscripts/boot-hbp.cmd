@@ -28,7 +28,7 @@ if test "${devtype}" = "mmc"; then part uuid mmc ${devnum}:1 partuuid; fi
 
 echo "Set FDT for ${board_name} [$board,$board_rev,$soc]"
 if test "${board}" = "imx8mq_hb" && test -e ${devtype} ${devnum} ${prefix}dtb/freescale/fsl-imx8mq-hummingboard-pulse.dtb; then setenv fdtfile "freescale/fsl-imx8mq-hummingboard-pulse.dtb"; fi
-if test "${board}" = "imx8mq_hb" && test -e ${devtype} ${devnum} ${prefix}dtb/freescale/fsl-imx8mq-hummingboard-pulse.dtb; then setenv fdtfile "freescale/imx8mq-hummingboard-pulse.dtb"; fi
+if test "${board}" = "imx8mq_hb" && test -e ${devtype} ${devnum} ${prefix}dtb/freescale/imx8mq-hummingboard-pulse.dtb; then setenv fdtfile "freescale/imx8mq-hummingboard-pulse.dtb"; fi
 
 #setenv bootargs "root=${rootdev} rootfstype=${rootfstype} rootwait ${consoleargs} consoleblank=0 video=mxcfb0:dev=hdmi,${disp_mode},if=RGB24,bpp=32 coherent_pool=2M cma=256M@2G rd.dm=0 rd.luks=0 rd.lvm=0 raid=noautodetect pci=nomsi vt.global_cursor_default=0 loglevel=${verbosity} usb-storage.quirks=${usbstoragequirks} ${extraargs}"
 setenv bootargs "root=${rootdev} rootfstype=${rootfstype} rootwait ${consoleargs} earlycon=ec_imx6q,0x30860000,115200 net.ifnames=0 consoleblank=0 loglevel=${verbosity} ubootpart=${partuuid} usb-storage.quirks=${usbstoragequirks} ${extraargs} ${extraboardargs}"
