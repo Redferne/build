@@ -1,14 +1,6 @@
-# iMX8Q 3GB LPDDR4 SoC eMMC GBE USB3 WWAN
+# iMX8Q 3GB LPDDR4 SoC eMMC 2*GBE USB3 WWAN
 BOARD_NAME="HB Pulse iMX8"
 BOARDFAMILY="imx8"
 BOOTCONFIG="imx8mq_hb_defconfig"
-#
-MODULES=""
-MODULES_NEXT=""
-#
-KERNEL_TARGET="legacy"
-CLI_TARGET="buster:default"
-#DESKTOP_TARGET="buster,bionic:default"
-#
-#CLI_BETA_TARGET="buster,bionic:dev"
-#DESKTOP_BETA_TARGET=""
+KERNEL_TARGET="legacy,dev"
+FULL_DESKTOP="yes"
