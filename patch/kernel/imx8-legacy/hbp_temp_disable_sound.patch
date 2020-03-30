@@ -1,0 +1,92 @@
+diff --git a/arch/arm64/boot/dts/freescale/fsl-imx8mq-hummingboard-pulse.dts b/arch/arm64/boot/dts/freescale/fsl-imx8mq-hummingboard-pulse.dts
+index 48dd052c0..bf2897a0c 100644
+--- a/arch/arm64/boot/dts/freescale/fsl-imx8mq-hummingboard-pulse.dts
++++ b/arch/arm64/boot/dts/freescale/fsl-imx8mq-hummingboard-pulse.dts
+@@ -112,49 +112,6 @@
+ 		};
+ 	};
+ 
+-	sound-wm8904 {
+-		compatible = "fsl,imx-audio-wm8904";
+-		model = "imx-wm8904";
+-		audio-cpu = <&sai2>;
+-		audio-codec = <&wm8904>;
+-		audio-routing =
+-			"Headphone Jack", "HPOUTL",
+-			"Headphone Jack", "HPOUTR",
+-			"IN1L", "Mic Jack",
+-			"Playback", "CPU-Playback",
+-			"CPU-Capture", "Capture";
+-	};
+-
+-	sound-hdmi {
+-		compatible = "fsl,imx8mq-evk-cdnhdmi",
+-				"fsl,imx-audio-cdnhdmi";
+-		model = "imx-audio-hdmi";
+-		audio-cpu = <&sai4>;
+-		protocol = <1>;
+-		hdmi-out;
+-		constraint-rate = <44100>,
+-				<88200>,
+-				<176400>,
+-				<32000>,
+-				<48000>,
+-				<96000>,
+-				<192000>;
+-	};
+-
+-	sound-spdif {
+-		compatible = "fsl,imx-audio-spdif";
+-		model = "imx-spdif";
+-		spdif-controller = <&spdif1>;
+-		spdif-out;
+-		spdif-in;
+-	};
+-
+-	sound-hdmi-arc {
+-		compatible = "fsl,imx-audio-spdif";
+-		model = "imx-hdmi-arc";
+-		spdif-controller = <&spdif2>;
+-		spdif-in;
+-	};
+ };
+ 
+ &clk {
+@@ -285,14 +242,6 @@
+ 			>;
+ 		};
+ 
+-		pinctrl_spdif1: spdif1grp {
+-			fsl,pins = <
+-				MX8MQ_IOMUXC_SPDIF_TX_SPDIF1_OUT	0xd6
+-				MX8MQ_IOMUXC_SPDIF_RX_SPDIF1_IN		0xd6
+-			>;
+-		};
+-
+-
+ 		pinctrl_uart2: uart2grp {
+ 			fsl,pins = <
+ 				MX8MQ_IOMUXC_UART2_TXD_UART2_DCE_TX		0x49
+@@ -485,22 +434,6 @@
+ 	status = "disabled";
+ };
+ 
+-&spdif1 {
+-	pinctrl-names = "default";
+-	pinctrl-0 = <&pinctrl_spdif1>;
+-	assigned-clocks = <&clk IMX8MQ_CLK_SPDIF1>;
+-	assigned-clock-parents = <&clk IMX8MQ_AUDIO_PLL1_OUT>;
+-	assigned-clock-rates = <24576000>;
+-	status = "okay";
+-};
+-
+-&spdif2 {
+-	assigned-clocks = <&clk IMX8MQ_CLK_SPDIF2>;
+-	assigned-clock-parents = <&clk IMX8MQ_AUDIO_PLL1_OUT>;
+-	assigned-clock-rates = <24576000>;
+-	status = "okay";
+-};
+-
+ &uart2 { /* J-Header */
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&pinctrl_uart2>;
