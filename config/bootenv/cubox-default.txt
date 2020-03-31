@@ -1,1 +1,2 @@
-verbosity=1
+verbosity=7
+#fdt_file="imx6dl-hummingboard2-som-v15.dtb"

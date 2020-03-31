@@ -17,6 +17,15 @@ BOARD=$3
 BUILD_DESKTOP=$4
 
 Main() {
+
+	if [[ $BOARD == hummingboardpulse-imx8q ]] || [[ $BOARD == cubox-i ]]; then
+		InstallLibQMI
+		InstallLibMBIM
+		InstallModemManager
+		InstallSpeedtest
+		InstallIperf3
+	fi
+
 	case $RELEASE in
 		xenial)
 			# your code here
@@ -27,10 +36,6 @@ Main() {
 			;;
 		buster)
 			# your code here
-			# Temporary disable log2ram
-			if [ "${BOARD}" = "hummingboardpulse-imx8q" ]; then
-				echo "ENABLED=false" > /etc/default/log2ram
-			fi
 			;;
 		bionic)
 			# your code here
@@ -240,5 +245,77 @@ InstallAdvancedDesktop()
 	[[ -f /usr/share/doc/avahi-daemon/examples/ssh.service ]] && cp /usr/share/doc/avahi-daemon/examples/ssh.service /etc/avahi/services/
 	apt clean
 } # InstallAdvancedDesktop
+
+InstallLibQMI()
+{
+	apt update
+	apt install -y bash-completion build-essential git ne picocom autoconf automake autoconf-archive libtool libglib2.0-dev libgudev-1.0-dev gettext
+	apt remove --purge libqmi-*
+	wget -q https://gitlab.freedesktop.org/mobile-broadband/libqmi/-/archive/master/libqmi-master.tar.gz
+	tar xf libqmi-master.tar.gz
+	cd libqmi-master
+	./autogen.sh --prefix=/usr --disable-maintainer-mode --libdir=/usr/lib/aarch64-linux-gnu --libexecdir=/usr/lib/aarch64-linux-gnu
+	make --jobs
+	make install
+	ldconfig
+}
+
+InstallLibMBIM()
+{
+	apt update
+	apt install -y bash-completion build-essential git ne picocom autoconf automake autoconf-archive libtool libglib2.0-dev libgudev-1.0-dev gettext
+	apt remove --purge libmbim-*
+	wget -q https://gitlab.freedesktop.org/mobile-broadband/libmbim/-/archive/master/libmbim-master.tar.gz
+	tar xf libmbim-master.tar.gz
+	cd libmbim-master
+	./autogen.sh --prefix=/usr --disable-maintainer-mode --libdir=/usr/lib/aarch64-linux-gnu --libexecdir=/usr/lib/aarch64-linux-gnu
+	make --jobs
+	make install
+	ldconfig
+}
+
+InstallModemManager()
+{
+	apt update
+	apt install -y bash-completion build-essential git ne picocom autoconf autopoint automake autoconf-archive libtool libglib2.0-dev libgudev-1.0-dev gettext libsystemd-dev xsltproc
+	apt remove --purge modemmanager
+	wget -q https://gitlab.freedesktop.org/aleksm/ModemManager/-/archive/master/ModemManager-master.tar.gz
+	tar xf ModemManager-master.tar.gz
+	cd ModemManager-master
+	./autogen.sh --prefix=/usr --disable-maintainer-mode --libdir=/usr/lib/aarch64-linux-gnu --libexecdir=/usr/lib/aarch64-linux-gnu --with-systemd-journal=yes --with-systemd-suspend-resume=no --with-at-command-via-dbus --with-udev-base-dir=/lib/udev --with-systemdsystemunitdir=/lib/systemd/system --with-dbus-sys-dir=/etc/dbus-1/system.d
+    make clean
+	make --jobs
+	make install
+	ldconfig
+	systemctl enable ModemManager.service
+}
+
+
+InstallSpeedtest()
+{
+	apt install -y gnupg1 apt-transport-https dirmngr
+	export INSTALL_KEY=379CE192D401AB61
+	export DEB_DISTRO=$(lsb_release -sc)
+	apt-key adv --keyserver keyserver.ubuntu.com --recv-keys $INSTALL_KEY
+	echo "deb https://ookla.bintray.com/debian ${DEB_DISTRO} main" | tee /etc/apt/sources.list.d/speedtest.list
+	apt update
+	apt remove speedtest-cli
+	apt install -y speedtest ethtool telnet tftp tftpd traceroute ftp
+}
+
+InstallIperf3()
+{
+	apt update
+	apt install -y unzip
+	apt remove --purge iperf iperf3
+	wget -q https://github.com/esnet/iperf/archive/master.zip
+	unzip -qo master.zip
+	cd iperf-master
+	./configure --prefix=/usr --libexecdir=/usr/lib/aarch64-linux-gnu --libdir=/usr/lib/aarch64-linux-gnu
+	make --jobs
+	make install
+	ldconfig
+}
+
 
 Main "$@"

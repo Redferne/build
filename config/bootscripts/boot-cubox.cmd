@@ -12,10 +12,20 @@ setenv disp_mode "1920x1080m60"
 
 # next kernels have different u-boot without autodetection
 if ext2load mmc 0 0x00000000 /boot/.next || ext2load mmc 0 0x00000000 .next; then
-	setenv fdt_file "imx6q-cubox-i.dtb"
+	echo "Set FDT for ${board_name} [$board_name,$board,$board_rev,$soc]"
+	# imx6dl-hummingboard2.dtb
+	# imx6dl-hummingboard2-som-v15.dtb
+	# imx6dl-hummingboard2-emmc-som-v15.dtb
+	if test "${board_rev}" = "MX6DL" && test "${board_name}" = "HUMMINGBOARD2"; then
+		setenv fdt_file "imx6dl-hummingboard2.dtb"
+	else
+		setenv fdt_file "imx6q-cubox-i.dtb"
+	fi
 else
 	run autodetectfdt
 fi
+
+echo "Detected FDT: ${fdt_addr}"
 
 # additional values
 setenv load_addr "0x10800000"
@@ -24,6 +34,8 @@ setenv ramdisk_addr "0x14800000"
 if ext2load mmc 0 ${load_addr} /boot/armbianEnv.txt || ext2load mmc 0 ${load_addr} armbianEnv.txt; then
 	env import -t ${load_addr} ${filesize}
 fi
+
+echo "Using FDT: ${fdt_addr}"
 
 if test "${console}" = "display" || test "${console}" = "both"; then setenv consoleargs "console=tty1"; fi
 if test "${console}" = "serial" || test "${console}" = "both"; then setenv consoleargs "${consoleargs} console=ttymxc0,115200"; fi
