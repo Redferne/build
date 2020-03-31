@@ -1,2 +1,8 @@
 verbosity=7
+console=both
+#fdt_file="imx6dl-hummingboard2.dtb"
 #fdt_file="imx6dl-hummingboard2-som-v15.dtb"
+#fdt_file="imx6dl-hummingboard2-emmc-som-v15.dtb"
+#fdt_file="imx6q-hummingboard2.dtb"
+#fdt_file="imx6q-hummingboard2-emmc-som-v15.dtb"
+#fdt_file="imx6q-hummingboard2-som-v15.dtb"
