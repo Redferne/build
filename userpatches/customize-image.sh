@@ -249,14 +249,15 @@ InstallAdvancedDesktop()
 InstallLibQMI()
 {
 	cd /tmp
-	libdir=$(pkg-config --variable=libdir mount)
 	apt update
 	apt install -y bash-completion build-essential git ne picocom autoconf automake autoconf-archive libtool libglib2.0-dev libgudev-1.0-dev gettext
+	export LIB_DIR=$(pkg-config --variable=libdir gudev-1.0)
+	echo "Installing to LIBDIR: [${LIB_DIR}]"
 	apt remove --purge libqmi-*
 	wget -q https://gitlab.freedesktop.org/mobile-broadband/libqmi/-/archive/master/libqmi-master.tar.gz
 	tar xf libqmi-master.tar.gz
 	cd libqmi-master
-	./autogen.sh --prefix=/usr --disable-maintainer-mode --libdir=${libdir} --libexecdir=${libdir}
+	./autogen.sh --prefix=/usr --disable-maintainer-mode --libdir=${LIB_DIR} --libexecdir=${LIB_DIR}
 	make --jobs
 	make install
 	ldconfig
@@ -268,14 +269,14 @@ InstallLibQMI()
 InstallLibMBIM()
 {
 	cd /tmp
-	libdir=$(pkg-config --variable=libdir mount)
 	apt update
 	apt install -y bash-completion build-essential git ne picocom autoconf automake autoconf-archive libtool libglib2.0-dev libgudev-1.0-dev gettext
+	export LIB_DIR=$(pkg-config --variable=libdir gudev-1.0)
 	apt remove --purge libmbim-*
 	wget -q https://gitlab.freedesktop.org/mobile-broadband/libmbim/-/archive/master/libmbim-master.tar.gz
 	tar xf libmbim-master.tar.gz
 	cd libmbim-master
-	./autogen.sh --prefix=/usr --disable-maintainer-mode --libdir=${libdir} --libexecdir=${libdir}
+	./autogen.sh --prefix=/usr --disable-maintainer-mode --libdir=${LIB_DIR} --libexecdir=${LIB_DIR}
 	make --jobs
 	make install
 	ldconfig
@@ -287,15 +288,15 @@ InstallLibMBIM()
 InstallModemManager()
 {
 	cd /tmp
-	libdir=$(pkg-config --variable=libdir mount)
 	apt update
 	apt install -y bash-completion build-essential git ne picocom autoconf autopoint automake autoconf-archive libtool libglib2.0-dev libgudev-1.0-dev gettext libsystemd-dev xsltproc
+	export LIB_DIR=$(pkg-config --variable=libdir gudev-1.0)
 	apt remove --purge modemmanager
 	wget -q https://gitlab.freedesktop.org/aleksm/ModemManager/-/archive/master/ModemManager-master.tar.gz
 	tar xf ModemManager-master.tar.gz
 	cd ModemManager-master
-	./autogen.sh --prefix=/usr --disable-maintainer-mode  --libdir=${libdir} --libexecdir=${libdir} --with-systemd-journal=yes --with-systemd-suspend-resume=no --with-at-command-via-dbus --with-udev-base-dir=/lib/udev --with-systemdsystemunitdir=/lib/systemd/system --with-dbus-sys-dir=/etc/dbus-1/system.d
-    make clean
+	./autogen.sh --prefix=/usr --disable-maintainer-mode --libdir=${LIB_DIR} --libexecdir=${LIB_DIR} --with-systemd-journal=yes --with-systemd-suspend-resume=no --with-at-command-via-dbus --with-udev-base-dir=/lib/udev --with-systemdsystemunitdir=/lib/systemd/system --with-dbus-sys-dir=/etc/dbus-1/system.d
+        make clean
 	make --jobs
 	make install
 	ldconfig
@@ -322,14 +323,14 @@ InstallSpeedtest()
 InstallIperf3()
 {
 	cd /tmp
-	libdir=$(pkg-config --variable=libdir mount)
+	export LIB_DIR=$(pkg-config --variable=libdir gudev-1.0)
 	apt update
 	apt install -y unzip
 	apt remove --purge iperf iperf3
 	wget -q https://github.com/esnet/iperf/archive/master.zip
 	unzip -qo master.zip
 	cd iperf-master
-	./configure --prefix=/usr --libdir=${libdir} --libexecdir=${libdir}
+	./configure --prefix=/usr --libdir=${LIB_DIR} --libexecdir=${LIB_DIR}
 	make --jobs
 	make install
 	ldconfig
