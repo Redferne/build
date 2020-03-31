@@ -248,6 +248,7 @@ InstallAdvancedDesktop()
 
 InstallLibQMI()
 {
+	cd /tmp
 	apt update
 	apt install -y bash-completion build-essential git ne picocom autoconf automake autoconf-archive libtool libglib2.0-dev libgudev-1.0-dev gettext
 	apt remove --purge libqmi-*
@@ -258,10 +259,14 @@ InstallLibQMI()
 	make --jobs
 	make install
 	ldconfig
+	cd ..
+	rm -rf libqmi-master.tar.gz libqmi-master
+	cd ..
 }
 
 InstallLibMBIM()
 {
+	cd /tmp
 	apt update
 	apt install -y bash-completion build-essential git ne picocom autoconf automake autoconf-archive libtool libglib2.0-dev libgudev-1.0-dev gettext
 	apt remove --purge libmbim-*
@@ -272,10 +277,14 @@ InstallLibMBIM()
 	make --jobs
 	make install
 	ldconfig
+	cd ..
+	rm -rf libmbim-master.tar.gz libmbim-master
+	cd ..
 }
 
 InstallModemManager()
 {
+	cd /tmp
 	apt update
 	apt install -y bash-completion build-essential git ne picocom autoconf autopoint automake autoconf-archive libtool libglib2.0-dev libgudev-1.0-dev gettext libsystemd-dev xsltproc
 	apt remove --purge modemmanager
@@ -288,11 +297,14 @@ InstallModemManager()
 	make install
 	ldconfig
 	systemctl enable ModemManager.service
+	cd ..
+	rm -rf ModemManager-master.tar.gz ModemManager-master
 }
 
 
 InstallSpeedtest()
 {
+	cd /tmp
 	apt install -y gnupg1 apt-transport-https dirmngr
 	export INSTALL_KEY=379CE192D401AB61
 	export DEB_DISTRO=$(lsb_release -sc)
@@ -301,10 +313,12 @@ InstallSpeedtest()
 	apt update
 	apt remove speedtest-cli
 	apt install -y speedtest ethtool telnet tftp tftpd traceroute ftp
+	cd ..
 }
 
 InstallIperf3()
 {
+	cd /tmp
 	apt update
 	apt install -y unzip
 	apt remove --purge iperf iperf3
@@ -315,6 +329,9 @@ InstallIperf3()
 	make --jobs
 	make install
 	ldconfig
+	cd ..
+	rm -rf master.zip iperf-master
+	cd ..
 }
 
 
