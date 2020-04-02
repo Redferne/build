@@ -2,5 +2,5 @@
 BOARD_NAME="HB Pulse iMX8"
 BOARDFAMILY="imx8"
 BOOTCONFIG="imx8mq_hb_defconfig"
-KERNEL_TARGET="legacy,dev"
+KERNEL_TARGET="legacy,current,dev"
 FULL_DESKTOP="yes"

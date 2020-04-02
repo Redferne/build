@@ -1,0 +1,639 @@
+diff --git a/arch/arm64/boot/dts/freescale/imx8mq-hummingboard-pulse.dts b/arch/arm64/boot/dts/freescale/imx8mq-hummingboard-pulse.dts
+index f52e872ac..09815607b 100644
+--- a/arch/arm64/boot/dts/freescale/imx8mq-hummingboard-pulse.dts
++++ b/arch/arm64/boot/dts/freescale/imx8mq-hummingboard-pulse.dts
+@@ -8,6 +8,15 @@
+ #include "dt-bindings/usb/pd.h"
+ #include "imx8mq-sr-som.dtsi"
+ 
++/* USB_HUB_CH1_PWR_EN				gpio1.IO[6]  ! REG */
++/* M.2_GPS_EN or USB_H1_PWR_EN 		gpio3.IO[4]  */
++/* USB_OTG_PWR_EN 					gpio3.IO[2]  */
++/* USB-HUB_RST						gpio4.IO[30] */
++/* M.2 RESET 						gpio4.IO[31] */
++/* M.2_PCIe_3V3_EN					gpio1.IO[12] ! Modems Power */
++/* USB1_PWR_EN 						gpio3.IO[15] ! REG */
++/* GPIO1 (LED) 						gpio5.IO[21] ! OpenDrain*/
++
+ / {
+ 	model = "SolidRun i.MX8MQ HummingBoard Pulse";
+ 	compatible = "solidrun,hummingboard-pulse", "fsl,imx8mq";
+@@ -16,6 +25,30 @@
+ 		stdout-path = &uart1;
+ 	};
+ 
++	reg_usbh1_vbus: usbh1_vbus {
++		compatible = "regulator-fixed";
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_reg_usbh1_vbus>;
++		regulator-name = "usbh1_vbus";
++		regulator-min-microvolt = <5000000>;
++		regulator-max-microvolt = <5000000>;
++		gpio = <&gpio1 6 GPIO_ACTIVE_HIGH>;
++		enable-active-high;
++		regulator-always-on;
++	};
++
++	reg_usb1_vbus: usb1_vbus {
++		compatible = "regulator-fixed";
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_reg_usb1_vbus>;
++		regulator-name = "usb1_vbus";
++		regulator-min-microvolt = <5000000>;
++		regulator-max-microvolt = <5000000>;
++		gpio = <&gpio3 15 GPIO_ACTIVE_HIGH>;
++		enable-active-high;
++		regulator-always-on;
++	};
++
+ 	reg_usdhc2_vmmc: regulator-usdhc2-vmmc {
+ 		compatible = "regulator-fixed";
+ 		pinctrl-names = "default";
+@@ -33,6 +66,132 @@
+ 		regulator-min-microvolt = <5000000>;
+ 		regulator-always-on;
+ 	};
++
++	leds {
++		compatible = "gpio-leds";
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_leds>;
++
++		led@0 {
++			label = "imx:green:heartbeat";
++			gpios = <&gpio5 21 GPIO_ACTIVE_LOW>;
++			linux,default-trigger = "heartbeat";
++			default-state = "on";
++		};
++	};
++
++	pcie0_refclk: pcie0-refclk {
++		compatible = "fixed-clock";
++		#clock-cells = <0>;
++		clock-frequency = <100000000>;
++	};
++
++	pcie1_refclk: pcie0-refclk {
++		compatible = "fixed-clock";
++		#clock-cells = <0>;
++		clock-frequency = <100000000>;
++	};
++
++	hsio {
++		compatible = "simple-bus";
++		#address-cells = <0x01>;
++		#size-cells = <0x01>;
++		ranges = <0x0 0x0 0x0 0x3e000000>;
++		dma-ranges = <0x40000000 0x0 0x40000000 0xc0000000>;
++
++		pcie00: pcie@33800000 {
++			ctrl-id = <0x00>;
++			pinctrl-names = "default";
++		//	pinctrl-0 = <&pinctrl_pcie00>;
++		//	reset-gpio = <&gpio5 28 GPIO_ACTIVE_LOW>;
++			clocks = <&clk IMX8MQ_CLK_PCIE1_ROOT>,
++				 <&clk IMX8MQ_CLK_PCIE1_AUX>,
++				 <&clk IMX8MQ_CLK_PCIE1_PHY>,
++				 <&pcie0_refclk>;
++			clock-names = "pcie", "pcie_aux", "pcie_phy", "pcie_bus";
++			status = "disabled";
++
++			compatible = "fsl,imx8mq-pcie";
++			reg = <0x33800000 0x400000>,
++			      <0x1ff00000 0x80000>;
++			reg-names = "dbi", "config";
++			#address-cells = <3>;
++			#size-cells = <2>;
++			device_type = "pci";
++			bus-range = <0x00 0xff>;
++			ranges = <0x81000000 0 0x00000000 0x1ff80000 0 0x00010000 /* downstream I/O 64KB */
++			          0x82000000 0 0x18000000 0x18000000 0 0x07f00000>; /* non-prefetchable memory */
++			num-lanes = <1>;
++			num-viewport = <4>;
++			interrupts = <GIC_SPI 122 IRQ_TYPE_LEVEL_HIGH>;
++			interrupt-names = "msi";
++			#interrupt-cells = <1>;
++			interrupt-map-mask = <0 0 0 0x7>;
++			interrupt-map = <0 0 0 1 &gic GIC_SPI 125 IRQ_TYPE_LEVEL_HIGH>,
++			                <0 0 0 2 &gic GIC_SPI 124 IRQ_TYPE_LEVEL_HIGH>,
++			                <0 0 0 3 &gic GIC_SPI 123 IRQ_TYPE_LEVEL_HIGH>,
++			                <0 0 0 4 &gic GIC_SPI 122 IRQ_TYPE_LEVEL_HIGH>;
++			fsl,max-link-speed = <1>;
++			power-domains = <&pgc_pcie>;
++			resets = <&src IMX8MQ_RESET_PCIEPHY>,
++			         <&src IMX8MQ_RESET_PCIE_CTRL_APPS_EN>,
++			         <&src IMX8MQ_RESET_PCIE_CTRL_APPS_TURNOFF>;
++			reset-names = "pciephy", "apps", "turnoff";
++		};
++
++		pcie01: pcie@33c00000 {
++			ctrl-id = <0x01>;
++			pinctrl-names = "default";
++		//	pinctrl-0 = <&pinctrl_pcie00>;
++		//	reset-gpio = <&gpio5 28 GPIO_ACTIVE_LOW>;
++			clocks = <&clk IMX8MQ_CLK_PCIE2_ROOT>,
++				 <&clk IMX8MQ_CLK_PCIE2_AUX>,
++				 <&clk IMX8MQ_CLK_PCIE2_PHY>,
++				 <&clk IMX8MQ_CLK_CLK2_CG>;
++		//		 <&pcie1_refclk>;
++			clock-names = "pcie", "pcie_aux", "pcie_phy", "pcie_bus";
++			status = "okay";
++
++			compatible = "fsl,imx8mq-pcie";
++			reg = <0x33c00000 0x400000>,
++			      <0x27f00000 0x80000>;
++			reg-names = "dbi", "config";
++			#address-cells = <3>;
++			#size-cells = <2>;
++			device_type = "pci";
++			ranges =  <0x81000000 0 0x00000000 0x27f80000 0 0x00010000 /* downstream I/O 64KB */
++				   0x82000000 0 0x20000000 0x20000000 0 0x07f00000>; /* non-prefetchable memory */
++			num-lanes = <1>;
++			num-viewport = <4>;
++			interrupts = <GIC_SPI 74 IRQ_TYPE_LEVEL_HIGH>;
++			interrupt-names = "msi";
++			#interrupt-cells = <1>;
++			interrupt-map-mask = <0 0 0 0x7>;
++			interrupt-map = <0 0 0 1 &gic GIC_SPI 77 IRQ_TYPE_LEVEL_HIGH>,
++					<0 0 0 2 &gic GIC_SPI 76 IRQ_TYPE_LEVEL_HIGH>,
++					<0 0 0 3 &gic GIC_SPI 75 IRQ_TYPE_LEVEL_HIGH>,
++					<0 0 0 4 &gic GIC_SPI 74 IRQ_TYPE_LEVEL_HIGH>;
++			fsl,max-link-speed = <2>;
++			power-domains = <&pgc_pcie>;
++			resets = <&src IMX8MQ_RESET_PCIEPHY2>,
++			         <&src IMX8MQ_RESET_PCIE2_CTRL_APPS_EN>,
++			         <&src IMX8MQ_RESET_PCIE2_CTRL_APPS_TURNOFF>;
++			reset-names = "pciephy", "apps", "turnoff";
++		};
++	};
++};
++
++&gpio1 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_modem_power>;
++	status = "okay";
++
++	// Enable 3.3V to Modems
++	modem-power {
++//		gpio-hog;
++		gpios = <12 GPIO_ACTIVE_HIGH>;
++		output-high;
++	};
+ };
+ 
+ &i2c2 {
+@@ -41,41 +200,6 @@
+ 	clock-frequency = <100000>;
+ 	status = "okay";
+ 
+-	typec_ptn5100: usb-typec@50 {
+-		compatible = "nxp,ptn5110";
+-		reg = <0x50>;
+-		pinctrl-names = "default";
+-		pinctrl-0 = <&pinctrl_typec>;
+-		interrupt-parent = <&gpio1>;
+-		interrupts = <6 IRQ_TYPE_LEVEL_LOW>;
+-
+-		connector {
+-			compatible = "usb-c-connector";
+-			label = "USB-C";
+-			data-role = "dual";
+-			power-role = "dual";
+-			try-power-role = "sink";
+-			source-pdos = <PDO_FIXED(5000, 2000,
+-						 PDO_FIXED_USB_COMM |
+-						 PDO_FIXED_SUSPEND |
+-						 PDO_FIXED_EXTPOWER)>;
+-			sink-pdos = <PDO_FIXED(5000, 2000,
+-					       PDO_FIXED_USB_COMM |
+-					       PDO_FIXED_SUSPEND |
+-					       PDO_FIXED_EXTPOWER)
+-				     PDO_FIXED(9000, 2000,
+-					       PDO_FIXED_USB_COMM |
+-					       PDO_FIXED_SUSPEND |
+-					       PDO_FIXED_EXTPOWER)>;
+-			op-sink-microwatt = <9000000>;
+-
+-			port {
+-				typec1_dr_sw: endpoint {
+-					remote-endpoint = <&usb1_drd_sw>;
+-				};
+-			};
+-		};
+-	};
+ };
+ 
+ &i2c3 {
+@@ -84,6 +208,12 @@
+ 	clock-frequency = <100000>;
+ 	status = "okay";
+ 
++	eeprom@57 {
++		compatible = "atmel,24c02";
++		reg = <0x57>;
++		status = "okay";
++	};
++
+ 	rtc@69 {
+ 		compatible = "abracon,ab1805";
+ 		reg = <0x69>;
+@@ -109,6 +239,94 @@
+ 	status = "okay";
+ };
+ 
++//	compatible = "fsl,imx8mq-pcie", "snps,dw-pcie";
++
++/*
++&pcie0 { // Modem
++	pinctrl-names = "default";
++//	pinctrl-0 = <&pinctrl_pcie00>;
++//	reset-gpio = <&gpio5 28 GPIO_ACTIVE_LOW>;
++	clocks = <&clk IMX8MQ_CLK_PCIE1_ROOT>,
++		 <&clk IMX8MQ_CLK_PCIE1_AUX>,
++		 <&clk IMX8MQ_CLK_PCIE1_PHY>,
++		 <&pcie0_refclk>;
++	clock-names = "pcie", "pcie_aux", "pcie_phy", "pcie_bus";
++//	status = "okay";
++};
++
++&pcie1 { // Ethernet
++	pinctrl-names = "default";
++//	pinctrl-0 = <&pinctrl_pcie00>;
++//	reset-gpio = <&gpio5 28 GPIO_ACTIVE_LOW>;
++	clocks = <&clk IMX8MQ_CLK_PCIE2_ROOT>,
++		 <&clk IMX8MQ_CLK_PCIE2_AUX>,
++		 <&clk IMX8MQ_CLK_PCIE2_PHY>,
++		 <&pcie1_refclk>;
++	clock-names = "pcie", "pcie_aux", "pcie_phy", "pcie_bus";
++	status = "okay";
++};
++*/
++
++/*
++
++&pcie0 { // Modem
++//	compatible = "fsl,imx8mq-pcie", "snps,dw-pcie";
++	reserved-region = <0x45>;
++	bus-range = <0x00 0xff>;
++
++	clock-names = "pcie", "pcie_aux", "pcie_phy", "pcie_bus";
++//	reset-gpio = <&gpio5 28 GPIO_ACTIVE_LOW>;
++	clocks = <&clk IMX8MQ_CLK_PCIE1_ROOT>,
++			 <&clk IMX8MQ_CLK_PCIE1_AUX>,
++			 <&clk IMX8MQ_CLK_PCIE1_PHY>,
++			 <&pcie0_refclk>;
++	fsl,max-link-speed = <0x01>; // 2?
++	ctrl-id = <0x00>;
++
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_pcie0>;
++
++	disable-gpio = <&gpio5 0x05 0x01>;
++	reset-gpio = <&gpio4 0x15 0x01>;
++
++	hard-wired = <0x01>;
++	status = "okay";
++};
++
++*/
++
++/*
++
++&pcie1 { // Ethernet Bridge
++	reserved-region = <0x45>;
++	bus-range = <0x00 0xff>;
++	clock-names = "pcie", "pcie_aux", "pcie_phy", "pcie_bus";
++	clocks = <&clk IMX8MQ_CLK_PCIE2_ROOT>,
++			 <&clk IMX8MQ_CLK_PCIE2_AUX>,
++			 <&clk IMX8MQ_CLK_PCIE2_PHY>,
++			 <&pcie1_refclk>;
++
++	fsl,max-link-speed = <0x01>;
++	ctrl-id = <0x01>;
++	hard-wired = <0x01>;
++//	status = "okay";
++};
++
++*/
++
++// MX8MQ_IOMUXC_I2C4_SCL_PCIE1_CLKREQ_B
++
++
++/*
++	pinctrl_pcie0: pcie0grp {
++		fsl,pins = <
++			MX8MQ_IOMUXC_I2C4_SCL_PCIE1_CLKREQ_B	0x74
++			MX8MQ_IOMUXC_SPDIF_EXT_CLK_GPIO5_IO5	0x16
++			MX8MQ_IOMUXC_SAI2_RXFS_GPIO4_IO21	0x16
++		>;
++	};
++*/
++
+ &usdhc2 {
+ 	pinctrl-names = "default", "state_100mhz", "state_200mhz";
+ 	pinctrl-0 = <&pinctrl_usdhc2>, <&pinctrl_usdhc2_gpio>;
+@@ -120,19 +338,17 @@
+ };
+ 
+ &usb_dwc3_0 {
+-	dr_mode = "otg";
++	vbus-supply = <&reg_usb1_vbus>;
++	dr_mode = "host";
+ 	status = "okay";
+-
+-	port {
+-		usb1_drd_sw: endpoint {
+-			remote-endpoint = <&typec1_dr_sw>;
+-		};
+-	};
++	snps,host-vbus-glitches;
+ };
+ 
+ &usb_dwc3_1 {
++	vbus-supply = <&reg_usbh1_vbus>; 
+ 	dr_mode = "host";
+ 	status = "okay";
++	snps,host-vbus-glitches;
+ };
+ 
+ &usb3_phy0 {
+@@ -147,6 +363,23 @@
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&pinctrl_hog>;
+ 
++
++	/*	BIT	8		7		6		5		4-3		2-0
++			LVTTL 	HYS 	PUE 	ODE 	SRE 	DSE
++		LVTLL Control signal to select LVTTL input
++		HYS Control signal to select Schymitt trigger
++		PUE Control signal to select internal pullup resistor
++		ODE Open Drain Enable
++		SRE 00 SLOW — Slow Frequency Slew Rate (50Mhz)
++		 	01 MEDIUM — Medium Frequency Slew Rate (100Mhz)
++		 	10 FAST — Fast Frequency Slew Rate (150Mhz)
++		 	11 MAX — Max Frequency Slew Rate (200Mhz)
++		DSE 000 HI-Z — Output driver is disabled (Hi-Z State)
++			001 255 Ohm @3.3V, 240 Ohm @2.5V, 230 Ohm @1.8V, 265 Ohm @1.2V
++			...
++			111 40_OHM — 40 Ohm @3.3V, 40 Ohm @2.5V, 33 Ohm @1.8V, 40 Ohm @1.2V
++	*/
++
+ 	pinctrl_hog: hoggrp {
+ 		fsl,pins = <
+ 			/* MikroBus Analog */
+@@ -178,13 +411,6 @@
+ 		>;
+ 	};
+ 
+-	pinctrl_typec: typecgrp {
+-		fsl,pins = <
+-			MX8MQ_IOMUXC_NAND_RE_B_GPIO3_IO15	0x16
+-			MX8MQ_IOMUXC_GPIO1_IO06_GPIO1_IO6	0x17059
+-		>;
+-	};
+-
+ 	pinctrl_uart2: uart2grp {
+ 		fsl,pins = <
+ 			MX8MQ_IOMUXC_UART2_TXD_UART2_DCE_TX		0x49
+@@ -206,6 +432,29 @@
+ 		>;
+ 	};
+ 
++	pinctrl_pcie00: pcie00grp {
++		fsl,pins = <
++			MX8MQ_IOMUXC_I2C4_SCL_PCIE1_CLKREQ_B		0x76
++			MX8MQ_IOMUXC_UART4_RXD_GPIO5_IO28			0x16
++		>;
++	};
++
++	pinctrl_reg_usb1_vbus: reg-usb1-vbus {
++		fsl,pins = <MX8MQ_IOMUXC_NAND_RE_B_GPIO3_IO15		0x19>;
++	};
++
++	pinctrl_reg_usbh1_vbus: reg-usbh1-vbus {
++		fsl,pins = <MX8MQ_IOMUXC_GPIO1_IO06_GPIO1_IO6		0x19>;
++	};
++
++	pinctrl_modem_power: modem-power {
++		fsl,pins = <MX8MQ_IOMUXC_GPIO1_IO12_GPIO1_IO12		0x19>;
++	};
++
++	pinctrl_leds: leds {
++	  	fsl,pins = <MX8MQ_IOMUXC_I2C4_SDA_GPIO5_IO21		0x27>; /* Tanya (LED) Opendrain */
++	};
++
+ 	pinctrl_usdhc2_gpio: usdhc2grpgpio {
+ 		fsl,pins = <
+ 			MX8MQ_IOMUXC_SD2_CD_B_GPIO2_IO12	0x41
+diff --git a/drivers/clk/imx/clk-imx8mq.c b/drivers/clk/imx/clk-imx8mq.c
+index 41fc9c633..2ddd356dc 100644
+--- a/drivers/clk/imx/clk-imx8mq.c
++++ b/drivers/clk/imx/clk-imx8mq.c
+@@ -5,6 +5,7 @@
+  */
+ 
+ #include <dt-bindings/clock/imx8mq-clock.h>
++#include <linux/slab.h>
+ #include <linux/clk.h>
+ #include <linux/err.h>
+ #include <linux/io.h>
+@@ -270,7 +271,21 @@ static const char * const imx8mq_clko1_sels[] = {"osc_25m", "sys1_pll_800m", "os
+ static const char * const imx8mq_clko2_sels[] = {"osc_25m", "sys2_pll_200m", "sys1_pll_400m", "sys2_pll_166m",
+ 					  "sys3_pll_out", "audio_pll1_out", "video_pll1_out", "ckil", };
+ 
+-static struct clk_onecell_data clk_data;
++static const char *imx8mq_clk2_sels[] = {
++	"osc_25m", "osc_27m", "dummy", "dummy",
++	"dummy", "dummy", "dummy", "dummy",
++	"dummy", "dummy", "dummy", "clk2_sys1_pll_out_div",
++	"clk2_sys2_pll_out_div", "clk2_sys3_pll_out_div", "clk2_dram_pll_out_div", "clk2_video2_pll_out_div",
++};
++
++static int const clks_init_on[] __initconst = {
++	IMX8MQ_CLK_DRAM_CORE, IMX8MQ_CLK_AHB,
++	IMX8MQ_CLK_NOC, IMX8MQ_CLK_NOC_APB,
++	IMX8MQ_CLK_USB_BUS,
++	IMX8MQ_CLK_MAIN_AXI, IMX8MQ_CLK_A53_CG,
++	IMX8MQ_CLK_TMU_ROOT,
++	IMX8MQ_CLK_DRAM_APB, IMX8MQ_DRAM_PLL_OUT,
++};
+ 
+ static struct clk ** const uart_clks[] = {
+ 	&clks[IMX8MQ_CLK_UART1_ROOT],
+@@ -280,12 +295,97 @@ static struct clk ** const uart_clks[] = {
+ 	NULL
+ };
+ 
++static struct clk_onecell_data clk_data;
++
++static int __init imx_clk_init_on(struct device_node *np,
++				  struct clk * const clks[])
++{
++	u32 *array;
++	int i, ret, elems;
++
++	elems = of_property_count_u32_elems(np, "init-on-array");
++	if (elems < 0)
++		return elems;
++	array = kzalloc(elems * sizeof(elems), GFP_KERNEL);
++	if (IS_ERR_OR_NULL(array))
++		return PTR_ERR(array);
++
++	ret = of_property_read_u32_array(np, "init-on-array", array, elems);
++	if (ret)
++		return ret;
++
++	for (i = 0; i < elems; i++) {
++		ret = clk_prepare_enable(clks[array[i]]);
++		if (ret)
++			pr_err("clk_prepare_enable failed %d\n", array[i]);
++	}
++
++	return 0;
++}
++
++
++struct init_clk {
++	unsigned clk;
++	unsigned parent;
++	unsigned rate;
++};
++
++static struct init_clk setup_clks[] = {
++	{IMX8MQ_CLK_AHB, IMX8MQ_SYS1_PLL_133M},
++	{IMX8MQ_CLK_NAND_USDHC_BUS, IMX8MQ_SYS1_PLL_266M},
++	{IMX8MQ_CLK_AUDIO_AHB, IMX8MQ_SYS2_PLL_500M},
++	/* config video_pll1 clock */
++	{IMX8MQ_VIDEO_PLL1_REF_SEL, IMX8MQ_CLK_27M},
++	{IMX8MQ_VIDEO_PLL1, 0, 593999999},
++	/* set pcie root's parent clk source */
++	{IMX8MQ_CLK_PCIE1_CTRL, IMX8MQ_SYS2_PLL_250M},
++	{IMX8MQ_CLK_PCIE1_PHY, IMX8MQ_SYS2_PLL_100M},
++	{IMX8MQ_CLK_PCIE2_CTRL, IMX8MQ_SYS2_PLL_250M},
++	{IMX8MQ_CLK_PCIE2_PHY, IMX8MQ_SYS2_PLL_100M},
++	{IMX8MQ_CLK_CSI1_CORE, IMX8MQ_SYS1_PLL_266M},
++	{IMX8MQ_CLK_CSI1_PHY_REF, IMX8MQ_SYS2_PLL_1000M},
++	{IMX8MQ_CLK_CSI1_ESC, IMX8MQ_SYS1_PLL_800M},
++	{IMX8MQ_CLK_CSI2_CORE, IMX8MQ_SYS1_PLL_266M},
++	{IMX8MQ_CLK_CSI2_PHY_REF, IMX8MQ_SYS2_PLL_1000M},
++	{IMX8MQ_CLK_CSI2_ESC, IMX8MQ_SYS1_PLL_800M},
++	{IMX8MQ_CLK_CLK2_SYS1_PLL_OUT_DIV, 0, 100000000},
++	{IMX8MQ_CLK_CLK2, IMX8MQ_CLK_CLK2_SYS1_PLL_OUT_DIV},
++};
++
++static void check_assigned_clocks(void)
++{
++	struct device_node *np;
++	struct of_phandle_args clkspec;
++	int i, index, rc, num_clks;
++
++	np = of_find_compatible_node(NULL, NULL, "fsl,imx8mq-ccm");
++	num_clks = of_count_phandle_with_args(np, "assigned-clocks",
++					 "#clock-cells");
++	for (index = 0; index < num_clks; index++) {
++		rc = of_parse_phandle_with_args(np, "assigned-clocks",
++			"#clock-cells", index, &clkspec);
++		if (rc < 0)
++			continue;
++		if (clkspec.np == np) {
++			int clk_num = clkspec.args[0];
++
++			for (i = 0; i < ARRAY_SIZE(setup_clks); i++) {
++				if (setup_clks[i].clk == clk_num) {
++					pr_info("%s: skipping %d\n", __func__, setup_clks[i].clk);
++					setup_clks[i].clk = 0;
++					break;
++				}
++			}
++		}
++	}
++}
++
+ static int imx8mq_clocks_probe(struct platform_device *pdev)
+ {
+ 	struct device *dev = &pdev->dev;
+ 	struct device_node *np = dev->of_node;
+ 	void __iomem *base;
+-	int err;
++	int err, i;
+ 
+ 	clks[IMX8MQ_CLK_DUMMY] = imx_clk_fixed("dummy", 0);
+ 	clks[IMX8MQ_CLK_32K] = of_clk_get_by_name(np, "ckil");
+@@ -367,6 +467,17 @@ static int imx8mq_clocks_probe(struct platform_device *pdev)
+ 	clks[IMX8MQ_SYS2_PLL_500M] = imx_clk_fixed_factor("sys2_pll_500m", "sys2_pll_out", 1, 2);
+ 	clks[IMX8MQ_SYS2_PLL_1000M] = imx_clk_fixed_factor("sys2_pll_1000m", "sys2_pll_out", 1, 1);
+ 
++	/* differential output clock */
++	clks[IMX8MQ_CLK_CLK2_SYS1_PLL_OUT_DIV]	= imx_clk_divider("clk2_sys1_pll_out_div", "sys1_pll_out", base + 0x7c, 0, 3);
++	clks[IMX8MQ_CLK_CLK2_SYS2_PLL_OUT_DIV]	= imx_clk_divider("clk2_sys2_pll_out_div", "sys2_pll_out", base + 0x7c, 4, 3);
++	clks[IMX8MQ_CLK_CLK2_SYS3_PLL_OUT_DIV]	= imx_clk_divider("clk2_sys3_pll_out_div", "sys3_pll_out", base + 0x7C, 8, 3);
++	clks[IMX8MQ_CLK_CLK2_DRAM_PLL_OUT_DIV]	= imx_clk_divider("clk2_dram_pll_out_div", "dram_pll_out", base + 0x7c, 12, 3);
++	clks[IMX8MQ_CLK_CLK2_VIDEO2_PLL_OUT_DIV] = imx_clk_divider("clk2_video2_pll_out_div", "video2_pll_out", base + 0x7c, 16, 3);
++	clks[IMX8MQ_CLK_CLK2] = imx_clk_mux("clk2", base + 0x74, 0, 4, imx8mq_clk2_sels, ARRAY_SIZE(imx8mq_clk2_sels));
++	clks[IMX8MQ_CLK_CLK2_CG] = imx_clk_gate("clk2_cg", "clk2", base + 0x74, 4);
++
++
++
+ 	np = dev->of_node;
+ 	base = devm_platform_ioremap_resource(pdev, 0);
+ 	if (WARN_ON(IS_ERR(base)))
+@@ -556,6 +667,11 @@ static int imx8mq_clocks_probe(struct platform_device *pdev)
+ 					   clks[IMX8MQ_ARM_PLL_OUT],
+ 					   clks[IMX8MQ_SYS1_PLL_800M]);
+ 
++	for (i = 0; i < IMX8MQ_CLK_END; i++)
++		if (IS_ERR(clks[i]))
++			pr_err("i.MX8mq clk %u register failed with %ld\n",
++			       i, PTR_ERR(clks[i]));
++
+ 	imx_check_clocks(clks, ARRAY_SIZE(clks));
+ 
+ 	clk_data.clks = clks;
+@@ -567,6 +683,26 @@ static int imx8mq_clocks_probe(struct platform_device *pdev)
+ 		goto unregister_clks;
+ 	}
+ 
++	/* enable all the clocks just for bringup */
++	if (imx_clk_init_on(np, clks)) {
++		for (i = 0; i < ARRAY_SIZE(clks_init_on);  i++)
++			clk_prepare_enable(clks[clks_init_on[i]]);
++	}
++
++	check_assigned_clocks();
++
++	for (i = 0; i < ARRAY_SIZE(setup_clks); i++) {
++		if (setup_clks[i].clk) {
++			if (setup_clks[i].parent)
++				clk_set_parent(clks[setup_clks[i].clk], clks[setup_clks[i].parent]);
++			if (setup_clks[i].rate)
++				clk_set_rate(clks[setup_clks[i].clk], setup_clks[i].rate);
++
++		}
++	}
++	/* increase NOC clock to achieve best DDR access performance */
++	clk_set_rate(clks[IMX8MQ_CLK_NOC], clk_get_rate(clks[IMX8MQ_SYS1_PLL_800M]));
++
+ 	imx_register_uart_clocks(uart_clks);
+ 
+ 	return 0;
+diff --git a/include/dt-bindings/clock/imx8mq-clock.h b/include/dt-bindings/clock/imx8mq-clock.h
+index 65463673d..c4adb0a62 100644
+--- a/include/dt-bindings/clock/imx8mq-clock.h
++++ b/include/dt-bindings/clock/imx8mq-clock.h
+@@ -403,5 +403,15 @@
+ #define IMX8MQ_CLK_SNVS_ROOT			264
+ #define IMX8MQ_CLK_GIC				265
+ 
+-#define IMX8MQ_CLK_END				266
++#define IMX8MQ_CLK_PHY_27MHZ                    266
++
++#define IMX8MQ_CLK_CLK2_SYS1_PLL_OUT_DIV        267
++#define IMX8MQ_CLK_CLK2_SYS2_PLL_OUT_DIV        268
++#define IMX8MQ_CLK_CLK2_SYS3_PLL_OUT_DIV        269
++#define IMX8MQ_CLK_CLK2_DRAM_PLL_OUT_DIV        270
++#define IMX8MQ_CLK_CLK2_VIDEO2_PLL_OUT_DIV      271
++#define IMX8MQ_CLK_CLK2                         272
++#define IMX8MQ_CLK_CLK2_CG                      273
++
++#define IMX8MQ_CLK_END                          274
+ #endif /* __DT_BINDINGS_CLOCK_IMX8MQ_H */
