@@ -1,0 +1,90 @@
+diff --git a/arch/arm64/boot/dts/freescale/imx8mq-hummingboard-pulse.dts b/arch/arm64/boot/dts/freescale/imx8mq-hummingboard-pulse.dts
+index 09815607b..edad3417a 100644
+--- a/arch/arm64/boot/dts/freescale/imx8mq-hummingboard-pulse.dts
++++ b/arch/arm64/boot/dts/freescale/imx8mq-hummingboard-pulse.dts
+@@ -17,6 +17,9 @@
+ /* USB1_PWR_EN 						gpio3.IO[15] ! REG */
+ /* GPIO1 (LED) 						gpio5.IO[21] ! OpenDrain*/
+ 
++/* Mini-PCIe_PREST# / SAI3_RXC		gpio4.IO[29] */
++/* Mini-PCIe_W_DIS# / PCIe_nWAKE	gpio3.IO[12] */
++
+ / {
+ 	model = "SolidRun i.MX8MQ HummingBoard Pulse";
+ 	compatible = "solidrun,hummingboard-pulse", "fsl,imx8mq";
+@@ -107,8 +110,10 @@
+ 			clocks = <&clk IMX8MQ_CLK_PCIE1_ROOT>,
+ 				 <&clk IMX8MQ_CLK_PCIE1_AUX>,
+ 				 <&clk IMX8MQ_CLK_PCIE1_PHY>,
+-				 <&pcie0_refclk>;
++				 <&clk IMX8MQ_CLK_CLK2_CG>;
++//				 <&pcie0_refclk>;
+ 			clock-names = "pcie", "pcie_aux", "pcie_phy", "pcie_bus";
++//			status = "okay";
+ 			status = "disabled";
+ 
+ 			compatible = "fsl,imx8mq-pcie";
+@@ -159,6 +164,8 @@
+ 			#address-cells = <3>;
+ 			#size-cells = <2>;
+ 			device_type = "pci";
++			bus-range = <0x00 0xff>;
++
+ 			ranges =  <0x81000000 0 0x00000000 0x27f80000 0 0x00010000 /* downstream I/O 64KB */
+ 				   0x82000000 0 0x20000000 0x20000000 0 0x07f00000>; /* non-prefetchable memory */
+ 			num-lanes = <1>;
+@@ -187,8 +194,38 @@
+ 	status = "okay";
+ 
+ 	// Enable 3.3V to Modems
++	/* M.2_PCIe_3V3_EN					gpio1.IO[12] ! Modems Power */
++
+ 	modem-power {
+-//		gpio-hog;
++		gpio-hog;
++		gpios = <12 GPIO_ACTIVE_HIGH>;
++		output-high;
++	};
++};
++
++&gpio4 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_mpcie_prest>;
++	status = "okay";
++
++	/* Mini-PCIe_PREST# / SAI3_RXC		gpio4.IO[29] */
++
++	mpcie-prest {
++		gpio-hog;
++		gpios = <29 GPIO_ACTIVE_HIGH>;
++		output-high;
++	};
++};
++
++&gpio3 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_mpcie_wdis>;
++	status = "okay";
++
++	/* Mini-PCIe_W_DIS# / PCIe_nWAKE	gpio3.IO[12] */
++
++	mpcie-wdis {
++		gpio-hog;
+ 		gpios = <12 GPIO_ACTIVE_HIGH>;
+ 		output-high;
+ 	};
+@@ -451,6 +488,14 @@
+ 		fsl,pins = <MX8MQ_IOMUXC_GPIO1_IO12_GPIO1_IO12		0x19>;
+ 	};
+ 
++	pinctrl_mpcie_prest: mpcie-prest {
++		fsl,pins = <MX8MQ_IOMUXC_SAI3_RXC_GPIO4_IO29		0x19>;
++	};
++
++	pinctrl_mpcie_wdis: mpcie-wdis {
++		fsl,pins = <MX8MQ_IOMUXC_NAND_DATA06_GPIO3_IO12		0x19>;
++	};
++
+ 	pinctrl_leds: leds {
+ 	  	fsl,pins = <MX8MQ_IOMUXC_I2C4_SDA_GPIO5_IO21		0x27>; /* Tanya (LED) Opendrain */
+ 	};
