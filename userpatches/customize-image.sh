@@ -253,7 +253,7 @@ InstallLibQMI()
 	apt install -y bash-completion build-essential git ne picocom autoconf automake autoconf-archive libtool libglib2.0-dev libgudev-1.0-dev gettext
 	export LIB_DIR=$(pkg-config --variable=libdir gudev-1.0)
 	echo "Installing to LIBDIR: [${LIB_DIR}]"
-	apt remove --purge libqmi-*
+	apt remove -y --purge libqmi-*
 	wget -q https://gitlab.freedesktop.org/mobile-broadband/libqmi/-/archive/master/libqmi-master.tar.gz
 	tar xf libqmi-master.tar.gz
 	cd libqmi-master
@@ -272,7 +272,7 @@ InstallLibMBIM()
 	apt update
 	apt install -y bash-completion build-essential git ne picocom autoconf automake autoconf-archive libtool libglib2.0-dev libgudev-1.0-dev gettext
 	export LIB_DIR=$(pkg-config --variable=libdir gudev-1.0)
-	apt remove --purge libmbim-*
+	apt remove -y --purge libmbim-*
 	wget -q https://gitlab.freedesktop.org/mobile-broadband/libmbim/-/archive/master/libmbim-master.tar.gz
 	tar xf libmbim-master.tar.gz
 	cd libmbim-master
@@ -291,7 +291,7 @@ InstallModemManager()
 	apt update
 	apt install -y bash-completion build-essential git ne picocom autoconf autopoint automake autoconf-archive libtool libglib2.0-dev libgudev-1.0-dev gettext libsystemd-dev xsltproc
 	export LIB_DIR=$(pkg-config --variable=libdir gudev-1.0)
-	apt remove --purge modemmanager
+	apt remove -y --purge modemmanager
 	wget -q https://gitlab.freedesktop.org/aleksm/ModemManager/-/archive/master/ModemManager-master.tar.gz
 	tar xf ModemManager-master.tar.gz
 	cd ModemManager-master
@@ -326,7 +326,7 @@ InstallIperf3()
 	export LIB_DIR=$(pkg-config --variable=libdir gudev-1.0)
 	apt update
 	apt install -y unzip
-	apt remove --purge iperf iperf3
+	apt remove -y --purge iperf iperf3
 	wget -q https://github.com/esnet/iperf/archive/master.zip
 	unzip -qo master.zip
 	cd iperf-master
