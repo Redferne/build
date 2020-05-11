@@ -250,16 +250,27 @@ InstallLibQMI()
 {
 	cd /tmp
 	apt update
-	apt install -y bash-completion build-essential git ne picocom autoconf automake autoconf-archive libtool libglib2.0-dev libgudev-1.0-dev gettext
+	apt install -y checkinstall bash-completion build-essential git ne picocom autoconf automake autoconf-archive libtool libglib2.0-dev libgudev-1.0-dev gettext
 	export LIB_DIR=$(pkg-config --variable=libdir gudev-1.0)
-	echo "Installing to LIBDIR: [${LIB_DIR}]"
+	echo "Installing libqmi to LIBDIR: [${LIB_DIR}]"
 	apt remove -y --purge libqmi-*
 	wget -q https://gitlab.freedesktop.org/mobile-broadband/libqmi/-/archive/master/libqmi-master.tar.gz
 	tar xf libqmi-master.tar.gz
 	cd libqmi-master
 	./autogen.sh --prefix=/usr --disable-maintainer-mode --libdir=${LIB_DIR} --libexecdir=${LIB_DIR}
+	VERSION=$(awk '/PACKAGE_VERSION =/{print $NF}' Makefile)
+	echo "Compiling libqmi-${VERSION}"
 	make --jobs
-	make install
+#	make install
+	echo "Installing libqmi..."
+    checkinstall -y -D --maintainer=nobody@nowhere.com --install=yes --pkgname libqmi --pkgversion=${VERSION} --nodoc
+    if [ "$?" -ne "0" ]; then
+    	echo "checkinstall libqmi failed!"
+    	exit 1
+    fi
+    mkdir -p /var/cache/apt/archive/
+	echo "Copy .deb to /var/cache/apt/archive/"
+    mv libqmi*.deb /var/cache/apt/archive/
 	ldconfig
 	cd ..
 	rm -rf libqmi-master.tar.gz libqmi-master
@@ -272,13 +283,25 @@ InstallLibMBIM()
 	apt update
 	apt install -y bash-completion build-essential git ne picocom autoconf automake autoconf-archive libtool libglib2.0-dev libgudev-1.0-dev gettext
 	export LIB_DIR=$(pkg-config --variable=libdir gudev-1.0)
+	echo "Installing libmbim to LIBDIR: [${LIB_DIR}]"
 	apt remove -y --purge libmbim-*
 	wget -q https://gitlab.freedesktop.org/mobile-broadband/libmbim/-/archive/master/libmbim-master.tar.gz
 	tar xf libmbim-master.tar.gz
 	cd libmbim-master
 	./autogen.sh --prefix=/usr --disable-maintainer-mode --libdir=${LIB_DIR} --libexecdir=${LIB_DIR}
+	VERSION=$(awk '/PACKAGE_VERSION =/{print $NF}' Makefile)
+	echo "Compiling libmbim-${VERSION}"
 	make --jobs
-	make install
+	echo "Installing libmbim..."
+    checkinstall -y -D --maintainer=nobody@nowhere.com --install=yes --pkgname libmbim --pkgversion=${VERSION} --nodoc
+    if [ "$?" -ne "0" ]; then
+    	echo "checkinstall libmbim failed!"
+    	exit 1
+    fi
+#	make install
+    mkdir -p /var/cache/apt/archive/
+	echo "Copy .deb to /var/cache/apt/archive/"
+    mv libmbim*.deb /var/cache/apt/archive/
 	ldconfig
 	cd ..
 	rm -rf libmbim-master.tar.gz libmbim-master
@@ -291,14 +314,27 @@ InstallModemManager()
 	apt update
 	apt install -y bash-completion build-essential git ne picocom autoconf autopoint automake autoconf-archive libtool libglib2.0-dev libgudev-1.0-dev gettext libsystemd-dev xsltproc
 	export LIB_DIR=$(pkg-config --variable=libdir gudev-1.0)
-	apt remove -y --purge modemmanager
+	echo "Installing modemmanager to LIBDIR: [${LIB_DIR}]"
+	apt remove -y --purge modemmanager libmm-glib0
 	wget -q https://gitlab.freedesktop.org/aleksm/ModemManager/-/archive/master/ModemManager-master.tar.gz
 	tar xf ModemManager-master.tar.gz
 	cd ModemManager-master
 	./autogen.sh --prefix=/usr --disable-maintainer-mode --libdir=${LIB_DIR} --libexecdir=${LIB_DIR} --with-systemd-journal=yes --with-systemd-suspend-resume=no --with-at-command-via-dbus --with-udev-base-dir=/lib/udev --with-systemdsystemunitdir=/lib/systemd/system --with-dbus-sys-dir=/etc/dbus-1/system.d
-        make clean
+	VERSION=$(awk '/PACKAGE_VERSION =/{print $NF}' Makefile)
+	echo "Compiling modemmanager-${VERSION}"
+    make clean
 	make --jobs
-	make install
+	echo "Installing modemmanager..."
+	mkdir -p /usr/share/icons/hicolor/22x22/apps
+    checkinstall -y -D --maintainer=nobody@nowhere.com --fstrans=yes --install=yes --pkgname modemmanager --pkgversion=${VERSION} --nodoc
+    if [ "$?" -ne "0" ]; then
+    	echo "checkinstall modemmanager failed!"
+    	exit 1
+    fi
+    mkdir -p /var/cache/apt/archive/
+	echo "Copy .deb to /var/cache/apt/archive/"
+    mv modemmanager*.deb /var/cache/apt/archive/
+#	make install
 	ldconfig
 	systemctl enable ModemManager.service
 	cd ..
@@ -324,6 +360,7 @@ InstallIperf3()
 {
 	cd /tmp
 	export LIB_DIR=$(pkg-config --variable=libdir gudev-1.0)
+	echo "Installing iperf3 to LIBDIR: [${LIB_DIR}]"
 	apt update
 	apt install -y unzip
 	apt remove -y --purge iperf iperf3
@@ -331,8 +368,19 @@ InstallIperf3()
 	unzip -qo master.zip
 	cd iperf-master
 	./configure --prefix=/usr --libdir=${LIB_DIR} --libexecdir=${LIB_DIR}
+	VERSION=$(awk '/PACKAGE_VERSION =/{print $NF}' Makefile)
+	echo "Compiling iperf3-${VERSION}"
 	make --jobs
-	make install
+	echo "Installing iperf3..."
+    checkinstall -y -D --maintainer=nobody@nowhere.com --install=yes --pkgname iperf3 --pkgversion=${VERSION} --nodoc
+    if [ "$?" -ne "0" ]; then
+    	echo "checkinstall iperf3 failed!"
+    	exit 1
+    fi
+    mkdir -p /var/cache/apt/archive/
+	echo "Copy .deb to /var/cache/apt/archive/"
+    mv iperf3*.deb /var/cache/apt/archive/
+#	make install
 	ldconfig
 	cd ..
 	rm -rf master.zip iperf-master
