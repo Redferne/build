@@ -261,16 +261,61 @@ InstallLibQMI()
 	VERSION=$(awk '/PACKAGE_VERSION =/{print $NF}' Makefile)
 	echo "Compiling libqmi-${VERSION}"
 	make --jobs
-#	make install
-	echo "Installing libqmi..."
-    checkinstall -y -D --maintainer=nobody@nowhere.com --install=yes --pkgname libqmi --pkgversion=${VERSION} --nodoc
+
+	echo "Installing libqmi-proxy..."
+	cd src/qmi-proxy
+	checkinstall -y -D --maintainer=nobody@nowhere.com --install=yes --pkgname libqmi-proxy --pkgversion=${VERSION} --nodoc \
+    --exclude=/usr/include,/usr/lib/pkgconfig
     if [ "$?" -ne "0" ]; then
-    	echo "checkinstall libqmi failed!"
+    	echo "checkinstall libqmi-proxy failed!"
     	exit 1
     fi
-    mkdir -p /var/cache/apt/archive/
-	echo "Copy .deb to /var/cache/apt/archive/"
-    mv libqmi*.deb /var/cache/apt/archive/
+    mv libqmi*.deb /var/cache/apt/archives/
+	cd ../..
+
+
+	echo "Installing libqmi-utils..."
+	cat <<-EOF > inst.sh
+	#!/bin/bash
+	make -C utils install
+	make -C src/qmicli install
+	make -C src/qmi-firmware-update install
+	EOF
+	chmod a+x inst.sh
+	checkinstall -y -D --maintainer=nobody@nowhere.com --install=yes --pkgname libqmi-utils --pkgversion=${VERSION} --nodoc ./inst.sh
+    if [ "$?" -ne "0" ]; then
+    	echo "checkinstall libqmi-utils failed!"
+    	exit 1
+    fi
+    mv libqmi*.deb /var/cache/apt/archives/
+
+	echo "Installing libqmi-glib-dev..."
+	cat <<-EOF > inst.sh
+	#!/bin/bash
+	make -C data install
+	make -C src/libqmi-glib install-data
+	EOF
+	chmod a+x inst.sh
+	checkinstall -y -D --maintainer=nobody@nowhere.com --install=yes --pkgname libqmi-glib-dev --pkgversion=${VERSION} --nodoc ./inst.sh
+    if [ "$?" -ne "0" ]; then
+    	echo "checkinstall libqmi-glib-dev failed!"
+    	exit 1
+    fi
+    mv libqmi*.deb /var/cache/apt/archives/
+
+	echo "Installing libqmi-glib5..."
+	cd src/libqmi-glib
+    checkinstall -y -D --maintainer=nobody@nowhere.com --install=yes --pkgname libqmi-glib5 --pkgversion=${VERSION} --nodoc \
+    --exclude=/usr/include,/usr/lib/pkgconfig
+    if [ "$?" -ne "0" ]; then
+    	echo "checkinstall libqmi-glib5 failed!"
+    	exit 1
+    fi
+    mkdir -p /var/cache/apt/archives/
+	echo "Copy .deb to /var/cache/apt/archives/"
+    mv libqmi*.deb /var/cache/apt/archives/
+	cd ../..
+
 	ldconfig
 	cd ..
 	rm -rf libqmi-master.tar.gz libqmi-master
@@ -292,16 +337,64 @@ InstallLibMBIM()
 	VERSION=$(awk '/PACKAGE_VERSION =/{print $NF}' Makefile)
 	echo "Compiling libmbim-${VERSION}"
 	make --jobs
-	echo "Installing libmbim..."
-    checkinstall -y -D --maintainer=nobody@nowhere.com --install=yes --pkgname libmbim --pkgversion=${VERSION} --nodoc
+
+
+	echo "Installing libmbim-proxy..."
+	cd src/mbim-proxy
+    checkinstall -y -D --maintainer=nobody@nowhere.com --install=yes --pkgname libmbim-proxy --pkgversion=${VERSION} --nodoc 
     if [ "$?" -ne "0" ]; then
-    	echo "checkinstall libmbim failed!"
+    	echo "checkinstall libmbim-proxy failed!"
     	exit 1
     fi
-#	make install
-    mkdir -p /var/cache/apt/archive/
-	echo "Copy .deb to /var/cache/apt/archive/"
-    mv libmbim*.deb /var/cache/apt/archive/
+    mkdir -p /var/cache/apt/archives/
+	echo "Copy .deb to /var/cache/apt/archives/"
+    mv libmbim*.deb /var/cache/apt/archives/
+    cd ../..
+
+	echo "Installing libmbim-utils..."
+	cat <<-EOF > inst.sh
+	#!/bin/bash
+	make -C utils install
+	make -C src/mbimcli install
+	EOF
+	chmod a+x inst.sh
+    checkinstall -y -D --maintainer=nobody@nowhere.com --install=yes --pkgname libmbim-utils --pkgversion=${VERSION} --nodoc ./inst.sh
+    if [ "$?" -ne "0" ]; then
+    	echo "checkinstall libmbim-proxy failed!"
+    	exit 1
+    fi
+    mkdir -p /var/cache/apt/archives/
+	echo "Copy .deb to /var/cache/apt/archives/"
+    mv libmbim*.deb /var/cache/apt/archives/
+
+	echo "Installing libmbim-glib-dev..."
+	cat <<-EOF > inst.sh
+	#!/bin/bash
+	make -C data install
+	make -C src/libmbim-glib install-data
+	EOF
+	chmod a+x inst.sh
+	checkinstall -y -D --maintainer=nobody@nowhere.com --install=yes --pkgname libmbim-glib-dev --pkgversion=${VERSION} --nodoc ./inst.sh
+    if [ "$?" -ne "0" ]; then
+    	echo "checkinstall libmbim-glib-dev failed!"
+    	exit 1
+    fi
+    mv libmbim*.deb /var/cache/apt/archives/
+
+	echo "Installing libmbim-glib4..."
+	cd src/libmbim-glib
+    checkinstall -y -D --maintainer=nobody@nowhere.com --install=yes --pkgname libmbim-glib4 --pkgversion=${VERSION} --nodoc \
+    --exclude=/usr/include,/usr/lib/pkgconfig
+    if [ "$?" -ne "0" ]; then
+    	echo "checkinstall libmbim-glib4 failed!"
+    	exit 1
+    fi
+    mkdir -p /var/cache/apt/archives/
+	echo "Copy .deb to /var/cache/apt/archives/"
+    mv libmbim*.deb /var/cache/apt/archives/
+    cd ../..
+
+
 	ldconfig
 	cd ..
 	rm -rf libmbim-master.tar.gz libmbim-master
@@ -315,8 +408,8 @@ InstallModemManager()
 	apt install -y bash-completion build-essential git ne picocom autoconf autopoint automake autoconf-archive libtool libglib2.0-dev libgudev-1.0-dev gettext libsystemd-dev xsltproc
 	export LIB_DIR=$(pkg-config --variable=libdir gudev-1.0)
 	echo "Installing modemmanager to LIBDIR: [${LIB_DIR}]"
-	apt remove -y --purge modemmanager libmm-glib0
-	wget -q https://gitlab.freedesktop.org/aleksm/ModemManager/-/archive/master/ModemManager-master.tar.gz
+	apt remove -y --purge modemmanager
+	wget -q https://gitlab.freedesktop.org/mobile-broadband//ModemManager/-/archive/master/ModemManager-master.tar.gz
 	tar xf ModemManager-master.tar.gz
 	cd ModemManager-master
 	./autogen.sh --prefix=/usr --disable-maintainer-mode --libdir=${LIB_DIR} --libexecdir=${LIB_DIR} --with-systemd-journal=yes --with-systemd-suspend-resume=no --with-at-command-via-dbus --with-udev-base-dir=/lib/udev --with-systemdsystemunitdir=/lib/systemd/system --with-dbus-sys-dir=/etc/dbus-1/system.d
@@ -324,16 +417,32 @@ InstallModemManager()
 	echo "Compiling modemmanager-${VERSION}"
     make clean
 	make --jobs
+
+	echo "Installing libmm-glib0..."
+	cd libmm-glib
+	checkinstall -y -D --maintainer=nobody@nowhere.com --fstrans=yes --install=yes --pkgname libmm-glib0 --pkgversion=${VERSION} --nodoc \
+    --exclude=/usr/include,/usr/lib/pkgconfig \
+	make install-exec
+    if [ "$?" -ne "0" ]; then
+    	echo "checkinstall libmm-glib0 failed!"
+    	exit 1
+    fi
+	echo "Copy .deb to /var/cache/apt/archives/"
+    mv libmm-glib0*.deb /var/cache/apt/archives/
+    cd ..
+
 	echo "Installing modemmanager..."
 	mkdir -p /usr/share/icons/hicolor/22x22/apps
-    checkinstall -y -D --maintainer=nobody@nowhere.com --fstrans=yes --install=yes --pkgname modemmanager --pkgversion=${VERSION} --nodoc
+    checkinstall -y -D --maintainer=nobody@nowhere.com --fstrans=yes --install=yes --pkgname modemmanager --pkgversion=${VERSION} --nodoc \
+    --exclude=${LIB_DIR}/libmm-glib*,/usr/include,/usr/lib/pkgconfig
+
     if [ "$?" -ne "0" ]; then
     	echo "checkinstall modemmanager failed!"
     	exit 1
     fi
-    mkdir -p /var/cache/apt/archive/
-	echo "Copy .deb to /var/cache/apt/archive/"
-    mv modemmanager*.deb /var/cache/apt/archive/
+    mkdir -p /var/cache/apt/archives/
+	echo "Copy .deb to /var/cache/apt/archives/"
+    mv modemmanager*.deb /var/cache/apt/archives/
 #	make install
 	ldconfig
 	systemctl enable ModemManager.service
@@ -377,9 +486,9 @@ InstallIperf3()
     	echo "checkinstall iperf3 failed!"
     	exit 1
     fi
-    mkdir -p /var/cache/apt/archive/
-	echo "Copy .deb to /var/cache/apt/archive/"
-    mv iperf3*.deb /var/cache/apt/archive/
+    mkdir -p /var/cache/apt/archives/
+	echo "Copy .deb to /var/cache/apt/archives/"
+    mv iperf3*.deb /var/cache/apt/archives/
 #	make install
 	ldconfig
 	cd ..
