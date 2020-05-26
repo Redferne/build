@@ -21,7 +21,7 @@ USEALLCORES=yes # Use all CPU cores for compiling
 EXIT_PATCHING_ERROR="" # exit patching if failed
 [[ -z $HOST ]] && HOST="$BOARD" # set hostname to the board
 cd ${SRC}
-ROOTFSCACHE_VERSION=24
+ROOTFSCACHE_VERSION=25
 CHROOT_CACHE_VERSION=7
 cd ${SRC}
 BUILD_REPOSITORY_URL=$(git remote get-url $(git remote 2>/dev/null) 2>/dev/null)
@@ -184,6 +184,9 @@ PACKAGE_LIST_DESKTOP_RECOMMENDS="galculator hexchat xfce4-screenshooter network-
 # Full desktop packages
 PACKAGE_LIST_DESKTOP_FULL="libreoffice libreoffice-style-tango meld remmina kazam avahi-daemon transmission"
 
+# Packages installed before desktop.
+PACKAGE_LIST_PREDEPENDS=""
+
 # Release specific packages
 case $RELEASE in
 
@@ -238,12 +241,13 @@ case $RELEASE in
 
 	focal)
 		DEBOOTSTRAP_COMPONENTS="main,universe"
-		DEBOOTSTRAP_LIST+=" rng-tools"
+		DEBOOTSTRAP_LIST+=" rng-tools debian-archive-keyring"
 		[[ -z $BUILD_MINIMAL || $BUILD_MINIMAL == no ]] && PACKAGE_LIST_RELEASE="man-db kbd net-tools gnupg2 dirmngr networkd-dispatcher"
 		PACKAGE_LIST_DESKTOP+=" xserver-xorg-input-all paprefs dbus-x11 pulseaudio-module-gsettings onboard"
-		PACKAGE_LIST_DESKTOP_RECOMMENDS+=" firefox system-config-printer-common system-config-printer \
+		PACKAGE_LIST_DESKTOP_RECOMMENDS+=" chromium system-config-printer-common system-config-printer \
 								language-selector-gnome viewnior"
 		PACKAGE_LIST_DESKTOP_FULL+=" thunderbird"
+		PACKAGE_LIST_PREDEPENDS="policykit-1-gnome notification-daemon"
 	;;
 
 	eoan)
@@ -251,15 +255,16 @@ case $RELEASE in
 		DEBOOTSTRAP_LIST+=" rng-tools"
 		[[ -z $BUILD_MINIMAL || $BUILD_MINIMAL == no ]] && PACKAGE_LIST_RELEASE="man-db kbd net-tools gnupg2 dirmngr networkd-dispatcher"
 		PACKAGE_LIST_DESKTOP+=" xserver-xorg-input-all paprefs dbus-x11 pulseaudio-module-gsettings onboard"
-		PACKAGE_LIST_DESKTOP_RECOMMENDS+=" firefox system-config-printer-common system-config-printer \
+		PACKAGE_LIST_DESKTOP_RECOMMENDS+=" chromium system-config-printer-common system-config-printer \
 								language-selector-gnome mirage"
 		PACKAGE_LIST_DESKTOP_FULL+=" thunderbird"
+		PACKAGE_LIST_PREDEPENDS="policykit-1-gnome notification-daemon"
 	;;
 
 esac
 
 
-DEBIAN_MIRROR='httpredir.debian.org/debian'
+DEBIAN_MIRROR='deb.debian.org/debian'
 DEBIAN_SECURTY='security.debian.org/'
 UBUNTU_MIRROR='ports.ubuntu.com/'
 
