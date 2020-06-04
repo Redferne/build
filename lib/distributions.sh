@@ -26,7 +26,7 @@ install_common()
 		>> "${DEST}"/debug/install.log 2>&1
 		if [[ $CRYPTROOT_SSH_UNLOCK == yes ]]; then
 			display_alert "Installing rootfs encryption related packages" "dropbear-initramfs" "info"
-			chroot "${SDCARD}" /bin/bash -c "apt -y -qq --no-install-recommends install dropbear-initramfs " \
+			chroot "${SDCARD}" /bin/bash -c "apt -y -qq --no-install-recommends install dropbear-initramfs cryptsetup-initramfs" \
 			>> "${DEST}"/debug/install.log 2>&1
 		fi
 
@@ -500,6 +500,9 @@ install_distribution_specific()
 
 		;;
 	bionic|eoan|focal)
+
+			# by using default lz4 initrd compression leads to corruption, go back to proven method
+			sed -i "s/^COMPRESS=.*/COMPRESS=gzip/" $SDCARD/etc/initramfs-tools/initramfs.conf
 
 			# remove doubled uname from motd
 			[[ -f $SDCARD/etc/update-motd.d/10-uname ]] && rm "${SDCARD}"/etc/update-motd.d/10-uname
