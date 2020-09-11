@@ -1,0 +1,21 @@
+diff --git a/arch/arm64/boot/dts/freescale/imx8mq-hummingboard-pulse.dts b/arch/arm64/boot/dts/freescale/imx8mq-hummingboard-pulse.dts
+index edad3417a..3f7620d7a 100644
+--- a/arch/arm64/boot/dts/freescale/imx8mq-hummingboard-pulse.dts
++++ b/arch/arm64/boot/dts/freescale/imx8mq-hummingboard-pulse.dts
+@@ -378,14 +378,14 @@
+ 	vbus-supply = <&reg_usb1_vbus>;
+ 	dr_mode = "host";
+ 	status = "okay";
+-	snps,host-vbus-glitches;
++	snps,parkmode-disable-ss-quirk,host-vbus-glitches;
+ };
+ 
+ &usb_dwc3_1 {
+ 	vbus-supply = <&reg_usbh1_vbus>; 
+ 	dr_mode = "host";
+ 	status = "okay";
+-	snps,host-vbus-glitches;
++	snps,parkmode-disable-ss-quirk,host-vbus-glitches;
+ };
+ 
+ &usb3_phy0 {
