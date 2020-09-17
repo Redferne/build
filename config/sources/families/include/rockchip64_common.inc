@@ -2,18 +2,29 @@ ARCH=arm64
 KERNEL_IMAGE_TYPE=Image
 OFFSET=16
 BOOTSCRIPT='boot-rockchip64.cmd:boot.cmd'
-BOOTENV_FILE='rockchip-default.txt'
+BOOTENV_FILE='rockchip.txt'
 UBOOT_TARGET_MAP=";;idbloader.bin uboot.img trust.bin"
 BOOTDELAY=0
 OVERLAY_PREFIX='rockchip'
-SERIALCON=${SERIALCON:-'ttyFIQ0:1500000'}
+SERIALCON=${SERIALCON:=$([ $BRANCH == "legacy" ] && echo "ttyFIQ0:1500000" || echo "ttyS2:1500000")}
 GOVERNOR="ondemand"
-CPUMAX="2016000"
-CPUMIN="600000"
+BOOTBRANCH="tag:v2020.07"
 
 RKBIN_DIR="$SRC/cache/sources/rkbin-tools"
 
-if [[ $BOARD == nanopi-r2s ]]; then
+if [[ $BOOTCONFIG == *3399* ]]; then
+
+	CPUMIN=${CPUMIN:="408000"}
+	CPUMAX=${CPUMAX:="2016000"}
+
+else # rk3308, rk3328
+
+	CPUMIN=${CPUMIN:="408000"}
+	CPUMAX=${CPUMAX:="1296000"}
+
+fi
+
+if [[ $BOARD == nanopi-r2s || $BOARD == rockpi-e || $BOARD == nanopineo3 ]]; then
 
 	BOOT_USE_BLOBS=yes
 	BOOT_SOC=rk3328
@@ -24,13 +35,12 @@ if [[ $BOARD == nanopi-r2s ]]; then
 elif [[ $BOOTCONFIG == *3328* ]]; then
 
 	BOOT_RK3328_USE_AYUFAN_ATF=yes
-	CPUMAX="1390000"
 
 elif [[ $BOARD == rockpi-4* ]]; then
 
 	BOOT_USE_BLOBS=yes
 	BOOT_SOC=rk3399
-	DDR_BLOB='rk33/rk3399_ddr_933MHz_v1.24.bin'
+	DDR_BLOB='rk33/rk3399_ddr_933MHz_v1.20.bin' # 1GB model does not boot with later versions
 	MINILOADER_BLOB='rk33/rk3399_miniloader_v1.19.bin'
 	BL31_BLOB='rk33/rk3399_bl31_v1.30.elf'
 
@@ -44,9 +54,8 @@ elif [[ $BOARD == rockpi-s ]]; then
 	BOOT_USE_BLOBS=yes
 	BOOT_SOC=rk3308
 	DDR_BLOB='rk33/rk3308_ddr_589MHz_uart0_m0_v1.26.bin'
-	MINILOADER_BLOB='rk33/rk3308_miniloader_v1.13.bin'
+	MINILOADER_BLOB='rk33/rk3308_miniloader_sd_nand_v1.13.bin'
 	BL31_BLOB='rk33/rk3308_bl31_v2.10.elf'
-	CPUMAX="1296000"
 
 else
 
@@ -59,7 +68,7 @@ case $BRANCH in
 	current)
 
 		KERNELPATCHDIR='rockchip64-'$BRANCH
-		KERNELBRANCH="branch:linux-5.4.y"
+		KERNELBRANCH="branch:linux-5.8.y"
 		LINUXFAMILY=rockchip64
 		LINUXCONFIG='linux-rockchip64-'$BRANCH
 
@@ -68,7 +77,7 @@ case $BRANCH in
 	dev)
 
 		KERNELPATCHDIR='rockchip64-'$BRANCH
-		KERNELBRANCH="branch:linux-5.6.y"
+		KERNELBRANCH="branch:linux-5.8.y"
 		LINUXFAMILY=rockchip64
 		LINUXCONFIG='linux-rockchip64-'$BRANCH
 
@@ -82,6 +91,7 @@ prepare_boot_configuration()
 
 		UBOOT_TARGET_MAP="BL31=bl31.bin idbloader.img u-boot.itb;;idbloader.img u-boot.itb"
 		ATFSOURCE='https://github.com/ARM-software/arm-trusted-firmware'
+		ATF_COMPILER='aarch64-linux-gnu-'
 		ATFDIR='arm-trusted-firmware'
 		ATFBRANCH='tag:v2.2'
 		ATF_USE_GCC='> 6.3'
@@ -112,6 +122,7 @@ prepare_boot_configuration()
 
 		UBOOT_TARGET_MAP=";;idbloader.bin uboot.img trust.bin"
 		ATFSOURCE='https://github.com/ayufan-rock64/arm-trusted-firmware'
+		ATF_COMPILER='aarch64-linux-gnu-'
 		ATFDIR='arm-trusted-firmware-rockchip64'
 		ATFBRANCH='branch:rockchip'
 		ATF_USE_GCC='> 6.3'
@@ -251,18 +262,16 @@ family_tweaks()
 		echo "auto lan0" >> $SDCARD/etc/network/interfaces
 		echo "	iface lan0 inet dhcp" >> $SDCARD/etc/network/interfaces
 
+	elif [[ $BOARD == helios64 ]]; then
+
+		chroot $SDCARD /bin/bash -c "systemctl --no-reload enable helios64-heartbeat-led.service >/dev/null 2>&1"
+
 	elif [[ -f $SDCARD/lib/systemd/system/rk3399-bluetooth.service ]]; then
 
 		# install and enable Bluetooth
 		chroot $SDCARD /bin/bash -c "apt-get -y -qq install rfkill bluetooth bluez bluez-tools"
 		chroot $SDCARD /bin/bash -c "systemctl --no-reload enable rk3399-bluetooth.service >/dev/null 2>&1"
 
-	fi
-
-	if [[ $BOARD == nanopim4v2 ]]; then
-		mv $SDCARD/lib/firmware/brcm/brcmfmac4356-sdio.bin{,.bak}
-		ln -s brcmfmac4356-sdio-nanopi-m4v2.bin $SDCARD/lib/firmware/brcm/brcmfmac4356-sdio.bin
-		ln -s brcmfmac4356-sdio-nanopi-m4v2.txt $SDCARD/lib/firmware/brcm/brcmfmac4356-sdio.friendlyarm,nanopi-m4.txt
 	fi
 
 }
@@ -280,9 +289,9 @@ family_tweaks_bsp()
 		install -m 755 $SRC/packages/bsp/rk3328/z28pro/start_bt.sh $destination/usr/local/bin
 		cp $SRC/packages/bsp/rk3328/z28pro/z28pro-bluetooth.service $destination/lib/systemd/system/
 
-	elif [[ $BOARD == rockpi-4b || $BOARD == nanop* || $BOARD == orangepi* || $BOARD == firefly* || $BOARD == roc-rk3399-pc ]]; then
+	elif [[ $BRANCH == legacy && ($BOARD == rockpi-4[bc] || $BOARD == nanop*4* || $BOARD == orangepi* || $BOARD == firefly*) ]]; then
 
-		# Bluetooth for most of others
+		# Bluetooth for most of others (custom patchram is needed only in legacy)
 		install -m 755 $SRC/packages/bsp/rk3399/brcm_patchram_plus_rk3399 $destination/usr/bin
 		cp $SRC/packages/bsp/rk3399/rk3399-bluetooth.service $destination/lib/systemd/system/
 
@@ -291,6 +300,27 @@ family_tweaks_bsp()
 	if [[ $BOARD == pinebook-pro ]]; then
 
 		cp $SRC/packages/bsp/pinebook-pro/xorg.conf $destination/etc/X11/
+	fi
+
+	if [[ $BOARD == helios64 ]]; then
+
+		mkdir -p $destination/etc/udev/rules.d/
+		mkdir -p $destination/lib/systemd/system-shutdown/
+		cp $SRC/packages/bsp/helios64/50-usb-realtek-net.rules $destination/etc/udev/rules.d/
+		cp $SRC/packages/bsp/helios64/70-keep-usb-lan-as-eth1.rules $destination/etc/udev/rules.d/
+		cp $SRC/packages/bsp/helios64/asound.conf $destination/etc/
+		install -m 755 $SRC/packages/bsp/helios64/disable_auto_poweron $destination/lib/systemd/system-shutdown/
+
+		### Fancontrol tweaks
+		# copy hwmon rules to fix device mapping
+		install -m 644 $SRC/packages/bsp/helios64/90-helios64-hwmon.rules $destination/etc/udev/rules.d/
+
+		# copy fancontrol config
+		install -m 644 $SRC/packages/bsp/helios64/fancontrol.conf $destination/etc/fancontrol
+
+		# LED tweak
+		cp $SRC/packages/bsp/helios64/helios64-heartbeat-led.service $destination/etc/systemd/system/
+
 	fi
 
 	# Graphics and media

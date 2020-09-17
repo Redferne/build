@@ -338,7 +338,7 @@ prepare_partitions()
 	# mountopts[ext2] is empty
 	# mountopts[fat] is empty
 	# mountopts[f2fs] is empty
-	mountopts[btrfs]=',commit=600,compress=lzo'
+	mountopts[btrfs]=',commit=600'
 	# mountopts[nfs] is empty
 
 	# default BOOTSIZE to use if not specified
@@ -389,8 +389,12 @@ prepare_partitions()
 		case $ROOTFS_TYPE in
 			btrfs)
 				# Used for server images, currently no swap functionality, so disk space
-				# requirements are rather low since rootfs gets filled with compress-force=zlib
-				local sdsize=$(bc -l <<< "scale=0; (($imagesize * 0.8) / 4 + 1) * 4")
+				if [[ $BTRFS_COMPRESSION == none ]]; then
+					local sdsize=$(bc -l <<< "scale=0; (($imagesize * 1.25) / 4 + 1) * 4")
+				else
+					# requirements are rather low since rootfs gets filled with compress-force=zlib
+					local sdsize=$(bc -l <<< "scale=0; (($imagesize * 0.8) / 4 + 1) * 4")
+				fi
 				;;
 			*)
 				# Hardcoded overhead +25% is needed for desktop images,
@@ -416,17 +420,17 @@ prepare_partitions()
 
 	# stage: create partition table
 	display_alert "Creating partitions" "${bootfs:+/boot: $bootfs }root: $ROOTFS_TYPE" "info"
-	parted -s ${SDCARD}.raw -- mklabel msdos
+	parted -s ${SDCARD}.raw -- mklabel ${IMAGE_PARTITION_TABLE}
 	if [[ $ROOTFS_TYPE == nfs ]]; then
 		# single /boot partition
-		parted -s ${SDCARD}.raw -- mkpart primary ${parttype[$bootfs]} ${bootstart}s -1s
+		parted -s ${SDCARD}.raw -- mkpart primary ${parttype[$bootfs]} ${bootstart}s 100%
 	elif [[ $BOOTSIZE == 0 ]]; then
 		# single root partition
-		parted -s ${SDCARD}.raw -- mkpart primary ${parttype[$ROOTFS_TYPE]} ${rootstart}s -1s
+		parted -s ${SDCARD}.raw -- mkpart primary ${parttype[$ROOTFS_TYPE]} ${rootstart}s 100%
 	else
 		# /boot partition + root partition
 		parted -s ${SDCARD}.raw -- mkpart primary ${parttype[$bootfs]} ${bootstart}s ${bootend}s
-		parted -s ${SDCARD}.raw -- mkpart primary ${parttype[$ROOTFS_TYPE]} ${rootstart}s -1s
+		parted -s ${SDCARD}.raw -- mkpart primary ${parttype[$ROOTFS_TYPE]} ${rootstart}s 100%
 	fi
 
 	# stage: mount image
@@ -465,7 +469,9 @@ prepare_partitions()
 		display_alert "Creating rootfs" "$ROOTFS_TYPE on $rootdevice"
 		mkfs.${mkfs[$ROOTFS_TYPE]} ${mkopts[$ROOTFS_TYPE]} $rootdevice
 		[[ $ROOTFS_TYPE == ext4 ]] && tune2fs -o journal_data_writeback $rootdevice > /dev/null
-		[[ $ROOTFS_TYPE == btrfs ]] && local fscreateopt="-o compress-force=zlib"
+		if [[ $ROOTFS_TYPE == btrfs && $BTRFS_COMPRESSION != none ]]; then
+			local fscreateopt="-o compress-force=${BTRFS_COMPRESSION}"
+		fi
 		mount ${fscreateopt} $rootdevice $MOUNT/
 		# create fstab (and crypttab) entry
 		if [[ $CRYPTROOT_ENABLE == yes ]]; then
@@ -624,7 +630,7 @@ create_image()
 	mkdir -p $DESTIMG
 	mv ${SDCARD}.raw $DESTIMG/${version}.img
 
-	if [[ $BUILD_ALL != yes ]]; then
+	if [[ -z $SEND_TO_SERVER ]]; then
 
 		if [[ $COMPRESS_OUTPUTIMAGE == "" || $COMPRESS_OUTPUTIMAGE == no ]]; then
 			COMPRESS_OUTPUTIMAGE="sha,gpg,img"
@@ -679,6 +685,17 @@ create_image()
 		rm -rf $DESTIMG
 	fi
 	display_alert "Done building" "$DEST/images/${version}.img" "info"
+
+	if [[ $BUILD_ALL == yes ]]; then
+		install -d -o igorp -g igorp -m 775 $DEST/images/${BOARD}/{archive,nightly}
+		if [[ "$BETA" == yes ]]; then
+			install ${INSTALL_PARA} $DEST/images/"${version}"* $DEST/images/"${BOARD}"/nightly
+			rm $DEST/images/"${version}"*
+		else
+			install ${INSTALL_PARA} $DEST/images/"${version}"* $DEST/images/"${BOARD}"/archive
+			rm $DEST/images/"${version}"*
+		fi
+	fi
 
 	# call custom post build hook
 	[[ $(type -t post_build_image) == function ]] && post_build_image "$DEST/images/${version}.img"

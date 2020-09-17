@@ -11,8 +11,8 @@
 
 # common options
 # daily beta build contains date in subrevision
-if [[ $BETA == yes && -z $SUBREVISION ]]; then SUBREVISION="."$(date --date="tomorrow" +"%j"); fi
-REVISION=$(cat ${SRC}/VERSION)"$SUBREVISION" # all boards have same revision
+#if [[ $BETA == yes && -z $SUBREVISION ]]; then SUBREVISION="."$(date --date="tomorrow" +"%j"); fi
+REVISION=$(cat "${SRC}"/VERSION)"$SUBREVISION" # all boards have same revision
 [[ -z $ROOTPWD ]] && ROOTPWD="1234" # Must be changed @first login
 [[ -z $MAINTAINER ]] && MAINTAINER="Igor Pecovnik" # deb signature
 [[ -z $MAINTAINERMAIL ]] && MAINTAINERMAIL="igor.pecovnik@****l.com" # deb signature
@@ -20,10 +20,9 @@ TZDATA=$(cat /etc/timezone) # Timezone for target is taken from host or defined 
 USEALLCORES=yes # Use all CPU cores for compiling
 EXIT_PATCHING_ERROR="" # exit patching if failed
 [[ -z $HOST ]] && HOST="$BOARD" # set hostname to the board
-cd ${SRC}
-ROOTFSCACHE_VERSION=27
+cd "${SRC}" || exit
+ROOTFSCACHE_VERSION=38
 CHROOT_CACHE_VERSION=7
-cd ${SRC}
 BUILD_REPOSITORY_URL=$(git remote get-url $(git remote 2>/dev/null) 2>/dev/null)
 BUILD_REPOSITORY_COMMIT=$(git describe --match=d_e_a_d_b_e_e_f --always --dirty 2>/dev/null)
 ROOTFS_CACHE_MAX=42 # max number of rootfs cache, older ones will be cleaned up
@@ -43,6 +42,9 @@ ROOT_MAPPER="armbian-root"
 
 [[ -z $ROOTFS_TYPE ]] && ROOTFS_TYPE=ext4 # default rootfs type is ext4
 [[ "ext4 f2fs btrfs nfs fel" != *$ROOTFS_TYPE* ]] && exit_with_error "Unknown rootfs type" "$ROOTFS_TYPE"
+
+[[ -z $BTRFS_COMPRESSION ]] && BTRFS_COMPRESSION=zlib # default btrfs filesystem compression method is zlib
+[[ ! $BTRFS_COMPRESSION =~ zlib|lzo|zstd|none ]] && exit_with_error "Unknown btrfs compression method" "$BTRFS_COMPRESSION"
 
 # Fixed image size is in 1M dd blocks (MiB)
 # to get size of block device /dev/sdX execute as root:
@@ -81,9 +83,15 @@ CAN_BUILD_STRETCH=yes
 ATF_COMPILE=yes
 [[ -z $CRYPTROOT_SSH_UNLOCK ]] && CRYPTROOT_SSH_UNLOCK=yes
 [[ -z $CRYPTROOT_SSH_UNLOCK_PORT ]] && CRYPTROOT_SSH_UNLOCK_PORT=2022
+# Default to pdkdf2, this used to be the default with cryptroot <= 2.0, however
+# cryptroot 2.1 changed that to Argon2i. Argon2i is a memory intensive
+# algorithm which doesn't play well with SBCs (need 1GiB RAM by default !)
+# https://gitlab.com/cryptsetup/cryptsetup/-/issues/372
+[[ -z $CRYPTROOT_PARAMETERS ]] && CRYPTROOT_PARAMETERS="--pbkdf pbkdf2"
 [[ -z $WIREGUARD ]] && WIREGUARD="yes"
 [[ -z $EXTRAWIFI ]] && EXTRAWIFI="yes"
 [[ -z $AUFS ]] && AUFS="yes"
+[[ -z $IMAGE_PARTITION_TABLE ]] && IMAGE_PARTITION_TABLE="msdos"
 
 # single ext4 partition is the default and preferred configuration
 #BOOTFS_TYPE=''
@@ -140,7 +148,6 @@ DEBOOTSTRAP_LIST="locales gnupg ifupdown apt-utils apt-transport-https ca-certif
 # tab cleanup is mandatory
 DEBOOTSTRAP_LIST=$(echo $DEBOOTSTRAP_LIST | sed -e 's,\\[trn],,g')
 
-
 # For minimal build different set of packages is needed
 # Essential packages for minimal build
 PACKAGE_LIST="bc cpufrequtils device-tree-compiler fping fake-hwclock psmisc chrony parted dialog \
@@ -148,12 +155,12 @@ PACKAGE_LIST="bc cpufrequtils device-tree-compiler fping fake-hwclock psmisc chr
 		nocache debconf-utils python3-apt"
 
 # Non-essential packages for minimal build
-PACKAGE_LIST_ADDITIONAL="network-manager wireless-tools lsof htop mmc-utils wget nano sysstat net-tools resolvconf iozone3"
+PACKAGE_LIST_ADDITIONAL="network-manager wireless-tools lsof htop mmc-utils wget nano sysstat net-tools resolvconf iozone3 jq libcrack2 cracklib-runtime curl"
 
 if [[ "$BUILD_MINIMAL" != "yes"  ]]; then
 	# Essential packages
 	PACKAGE_LIST="$PACKAGE_LIST bridge-utils build-essential fbset \
-		iw wpasupplicant sudo curl linux-base crda \
+		iw wpasupplicant sudo linux-base crda \
 		wireless-regdb unattended-upgrades \
 		console-setup unicode-data initramfs-tools \
 		ca-certificates expect iptables automake html2text \
@@ -193,7 +200,7 @@ case $RELEASE in
 	xenial)
 		DEBOOTSTRAP_COMPONENTS="main"
 		DEBOOTSTRAP_LIST+=" btrfs-tools"
-		[[ -z $BUILD_MINIMAL || $BUILD_MINIMAL == no ]] && PACKAGE_LIST_RELEASE="man-db sysbench command-not-found"
+		[[ -z $BUILD_MINIMAL || $BUILD_MINIMAL == no ]] && PACKAGE_LIST_RELEASE="man-db sysbench command-not-found selinux-policy-default"
 		PACKAGE_LIST_DESKTOP+=" paman libgcr-3-common gcj-jre-headless paprefs numix-icon-theme libgnome2-perl \
 								pulseaudio-module-gconf onboard"
 		PACKAGE_LIST_DESKTOP_RECOMMENDS+=" chromium-browser language-selector-gnome system-config-printer-common \
@@ -204,7 +211,7 @@ case $RELEASE in
 	stretch)
 		DEBOOTSTRAP_COMPONENTS="main"
 		DEBOOTSTRAP_LIST+=" rng-tools"
-		[[ -z $BUILD_MINIMAL || $BUILD_MINIMAL == no ]] && PACKAGE_LIST_RELEASE="man-db kbd net-tools gnupg2 dirmngr sysbench command-not-found"
+		[[ -z $BUILD_MINIMAL || $BUILD_MINIMAL == no ]] && PACKAGE_LIST_RELEASE="man-db kbd net-tools gnupg2 dirmngr sysbench command-not-found selinux-policy-default"
 		PACKAGE_LIST_DESKTOP+=" paman libgcr-3-common gcj-jre-headless paprefs dbus-x11 libgnome2-perl pulseaudio-module-gconf onboard"
 		PACKAGE_LIST_DESKTOP_RECOMMENDS+=" chromium system-config-printer-common system-config-printer leafpad mirage"
 		PACKAGE_LIST_DESKTOP_FULL+=" thunderbird"
@@ -213,7 +220,7 @@ case $RELEASE in
 	bionic)
 		DEBOOTSTRAP_COMPONENTS="main,universe"
 		DEBOOTSTRAP_LIST+=" rng-tools fdisk"
-		[[ -z $BUILD_MINIMAL || $BUILD_MINIMAL == no ]] && PACKAGE_LIST_RELEASE="man-db kbd net-tools gnupg2 dirmngr networkd-dispatcher command-not-found"
+		[[ -z $BUILD_MINIMAL || $BUILD_MINIMAL == no ]] && PACKAGE_LIST_RELEASE="man-db kbd net-tools gnupg2 dirmngr networkd-dispatcher command-not-found selinux-policy-default"
 		PACKAGE_LIST_DESKTOP+=" xserver-xorg-input-all paprefs dbus-x11 libgnome2-perl pulseaudio-module-gconf onboard"
 		PACKAGE_LIST_DESKTOP_RECOMMENDS+=" chromium-browser system-config-printer-common system-config-printer \
 								language-selector-gnome leafpad mirage"
@@ -223,7 +230,7 @@ case $RELEASE in
 	buster)
 		DEBOOTSTRAP_COMPONENTS="main"
 		DEBOOTSTRAP_LIST+=" rng-tools fdisk"
-		[[ -z $BUILD_MINIMAL || $BUILD_MINIMAL == no ]] && PACKAGE_LIST_RELEASE="man-db kbd net-tools gnupg2 dirmngr networkd-dispatcher command-not-found"
+		[[ -z $BUILD_MINIMAL || $BUILD_MINIMAL == no ]] && PACKAGE_LIST_RELEASE="man-db kbd net-tools gnupg2 dirmngr networkd-dispatcher command-not-found selinux-policy-default"
 		PACKAGE_LIST_DESKTOP+=" paprefs dbus-x11 numix-icon-theme onboard"
 		PACKAGE_LIST_DESKTOP_RECOMMENDS+=" chromium system-config-printer-common system-config-printer mirage"
 		PACKAGE_LIST_DESKTOP_FULL+=" thunderbird"
@@ -241,10 +248,10 @@ case $RELEASE in
 
 	focal)
 		DEBOOTSTRAP_COMPONENTS="main,universe"
-		DEBOOTSTRAP_LIST+=" rng-tools debian-archive-keyring fdisk"
-		[[ -z $BUILD_MINIMAL || $BUILD_MINIMAL == no ]] && PACKAGE_LIST_RELEASE="man-db kbd net-tools gnupg2 dirmngr networkd-dispatcher"
+		DEBOOTSTRAP_LIST+=" rng-tools fdisk"
+		[[ -z $BUILD_MINIMAL || $BUILD_MINIMAL == no ]] && PACKAGE_LIST_RELEASE="man-db kbd net-tools gnupg2 dirmngr networkd-dispatcher selinux-policy-default"
 		PACKAGE_LIST_DESKTOP+=" xserver-xorg-input-all paprefs dbus-x11 pulseaudio-module-gsettings onboard"
-		PACKAGE_LIST_DESKTOP_RECOMMENDS+=" chromium system-config-printer-common system-config-printer \
+		PACKAGE_LIST_DESKTOP_RECOMMENDS+=" firefox system-config-printer-common system-config-printer \
 								language-selector-gnome viewnior"
 		PACKAGE_LIST_DESKTOP_FULL+=" thunderbird"
 		PACKAGE_LIST_PREDEPENDS="policykit-1-gnome notification-daemon"
@@ -253,9 +260,9 @@ case $RELEASE in
 	eoan)
 		DEBOOTSTRAP_COMPONENTS="main,universe"
 		DEBOOTSTRAP_LIST+=" rng-tools fdisk"
-		[[ -z $BUILD_MINIMAL || $BUILD_MINIMAL == no ]] && PACKAGE_LIST_RELEASE="man-db kbd net-tools gnupg2 dirmngr networkd-dispatcher"
+		[[ -z $BUILD_MINIMAL || $BUILD_MINIMAL == no ]] && PACKAGE_LIST_RELEASE="man-db kbd net-tools gnupg2 dirmngr networkd-dispatcher selinux-policy-default"
 		PACKAGE_LIST_DESKTOP+=" xserver-xorg-input-all paprefs dbus-x11 pulseaudio-module-gsettings onboard"
-		PACKAGE_LIST_DESKTOP_RECOMMENDS+=" chromium system-config-printer-common system-config-printer \
+		PACKAGE_LIST_DESKTOP_RECOMMENDS+=" firefox system-config-printer-common system-config-printer \
 								language-selector-gnome mirage"
 		PACKAGE_LIST_DESKTOP_FULL+=" thunderbird"
 		PACKAGE_LIST_PREDEPENDS="policykit-1-gnome notification-daemon"
