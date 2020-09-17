@@ -472,7 +472,7 @@ InstallIperf3()
 	echo "Installing iperf3 to LIBDIR: [${LIB_DIR}]"
 	apt update
 	apt install -y unzip
-	apt remove -y --purge iperf iperf3
+	apt remove -y --purge iperf iperf3 libiperf0
 	wget -q https://github.com/esnet/iperf/archive/master.zip
 	unzip -qo master.zip
 	cd iperf-master
