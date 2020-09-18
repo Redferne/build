@@ -1,14 +1,14 @@
-From 6b6f48ae2bec27aaa930e44c42bc87c3e1e8b346 Mon Sep 17 00:00:00 2001
+From 7a8a1392109bfde3528f230eddedeb502e4c2c1f Mon Sep 17 00:00:00 2001
 From: Redferne <mr.redferne@gmail.com>
-Date: Thu, 17 Sep 2020 17:39:15 +0200
-Subject: [PATCH] enable_pcie_usb3ss_led_quirks
+Date: Fri, 18 Sep 2020 18:48:48 +0200
+Subject: [PATCH] enable_pcie_eth1_usb3ss_led_quirks
 
 Signed-off-by: Redferne <mr.redferne@gmail.com>
 ---
  .../freescale/imx8mq-hummingboard-pulse.dts   | 252 ++++++++++++++----
- drivers/clk/imx/clk-imx8mq.c                  | 127 +++++++++
+ drivers/clk/imx/clk-imx8mq.c                  | 133 +++++++++
  include/dt-bindings/clock/imx8mq-clock.h      |  11 +-
- 3 files changed, 335 insertions(+), 55 deletions(-)
+ 3 files changed, 341 insertions(+), 55 deletions(-)
 
 diff --git a/arch/arm64/boot/dts/freescale/imx8mq-hummingboard-pulse.dts b/arch/arm64/boot/dts/freescale/imx8mq-hummingboard-pulse.dts
 index bfd91c1ed..865d65061 100644
@@ -329,19 +329,30 @@ index bfd91c1ed..865d65061 100644
 +	};
  };
 diff --git a/drivers/clk/imx/clk-imx8mq.c b/drivers/clk/imx/clk-imx8mq.c
-index a64aace21..ea343f009 100644
+index a64aace21..d70c368cd 100644
 --- a/drivers/clk/imx/clk-imx8mq.c
 +++ b/drivers/clk/imx/clk-imx8mq.c
-@@ -269,6 +269,40 @@ static const char * const imx8mq_clko1_sels[] = {"osc_25m", "sys1_pll_800m", "os
- 					  "audio_pll2_out", "sys2_pll_500m", "vpu_pll_out", "sys1_pll_80m", };
+@@ -5,11 +5,15 @@
+  */
+ 
+ #include <dt-bindings/clock/imx8mq-clock.h>
++#include <linux/clk.h>
++#include <linux/clkdev.h>
+ #include <linux/clk-provider.h>
+ #include <linux/err.h>
+ #include <linux/io.h>
+ #include <linux/module.h>
++#include <linux/of.h>
+ #include <linux/of_address.h>
++#include <linux/of_irq.h>
+ #include <linux/types.h>
+ #include <linux/slab.h>
+ #include <linux/platform_device.h>
+@@ -270,6 +274,36 @@ static const char * const imx8mq_clko1_sels[] = {"osc_25m", "sys1_pll_800m", "os
  static const char * const imx8mq_clko2_sels[] = {"osc_25m", "sys2_pll_200m", "sys1_pll_400m", "sys2_pll_166m",
  					  "sys3_pll_out", "audio_pll1_out", "video_pll1_out", "ckil", };
-+static const char * const imx8mq_clk2_sels[] = {
-+	"osc_25m", "osc_27m", "dummy", "dummy",
-+	"dummy", "dummy", "dummy", "dummy",
-+	"dummy", "dummy", "dummy", "clk2_sys1_pll_out_div",
-+	"clk2_sys2_pll_out_div", "clk2_sys3_pll_out_div", "clk2_dram_pll_out_div", "clk2_video2_pll_out_div",
-+};
+ 
++static const char * const imx8mq_clk2_sels[] = {"osc_25m", "osc_27m", "dummy", "dummy",	"dummy", "dummy", "dummy", "dummy",	"dummy", "dummy", "dummy", "clk2_sys1_pll_out_div",	"clk2_sys2_pll_out_div", "clk2_sys3_pll_out_div", "clk2_dram_pll_out_div", "clk2_video2_pll_out_div",};
 +
 +struct init_clk {
 +	unsigned clk;
@@ -370,24 +381,28 @@ index a64aace21..ea343f009 100644
 +	{IMX8MQ_CLK_CLK2_SYS1_PLL_OUT_DIV, 0, 100000000},
 +	{IMX8MQ_CLK_CLK2, IMX8MQ_CLK_CLK2_SYS1_PLL_OUT_DIV},
 +};
- 
++
  static struct clk_hw_onecell_data *clk_hw_data;
  static struct clk_hw **hws;
-@@ -281,6 +315,69 @@ static const int uart_clk_ids[] = {
+ 
+@@ -281,6 +315,72 @@ static const int uart_clk_ids[] = {
  };
  static struct clk **uart_hws[ARRAY_SIZE(uart_clk_ids) + 1];
  
 +static int const clks_init_on[] __initconst = {
-+	IMX8MQ_CLK_DRAM_CORE, IMX8MQ_CLK_AHB,
-+	IMX8MQ_CLK_NOC, IMX8MQ_CLK_NOC_APB,
++	IMX8MQ_CLK_DRAM_CORE,
++	IMX8MQ_CLK_AHB,
++	IMX8MQ_CLK_NOC,
++	IMX8MQ_CLK_NOC_APB,
 +	IMX8MQ_CLK_USB_BUS,
-+	IMX8MQ_CLK_MAIN_AXI, IMX8MQ_CLK_A53_CG,
++	IMX8MQ_CLK_MAIN_AXI,
++	IMX8MQ_CLK_A53_CG,
 +	IMX8MQ_CLK_TMU_ROOT,
-+	IMX8MQ_CLK_DRAM_APB, IMX8MQ_DRAM_PLL_OUT,
++	IMX8MQ_CLK_DRAM_APB,
++	IMX8MQ_DRAM_PLL_OUT,
 +};
 +
-+static int __init imx_clk_init_on(struct device_node *np,
-+				  struct clk_hw * const clks[])
++static int __init imx_clk_init_on(struct device_node *np)
 +{
 +	u32 *array;
 +	int i, ret, elems;
@@ -402,13 +417,13 @@ index a64aace21..ea343f009 100644
 +	ret = of_property_read_u32_array(np, "init-on-array", array, elems);
 +	if (ret)
 +		return ret;
-+/*
++
 +	for (i = 0; i < elems; i++) {
-+		ret = clk_prepare_enable(clks[array[i]]->clk);
++		ret = clk_prepare_enable(hws[array[i]]->clk);
 +		if (ret)
 +			pr_err("clk_prepare_enable failed %d\n", array[i]);
 +	}
-+*/
++
 +	return 0;
 +}
 +
@@ -443,7 +458,7 @@ index a64aace21..ea343f009 100644
  static int imx8mq_clocks_probe(struct platform_device *pdev)
  {
  	struct device *dev = &pdev->dev;
-@@ -399,6 +496,15 @@ static int imx8mq_clocks_probe(struct platform_device *pdev)
+@@ -399,6 +499,15 @@ static int imx8mq_clocks_probe(struct platform_device *pdev)
  	hws[IMX8MQ_SYS2_PLL_500M] = imx_clk_hw_fixed_factor("sys2_pll_500m", "sys2_pll_500m_cg", 1, 2);
  	hws[IMX8MQ_SYS2_PLL_1000M] = imx_clk_hw_fixed_factor("sys2_pll_1000m", "sys2_pll_1000m_cg", 1, 1);
  
@@ -459,34 +474,37 @@ index a64aace21..ea343f009 100644
  	np = dev->of_node;
  	base = devm_platform_ioremap_resource(pdev, 0);
  	if (WARN_ON(IS_ERR(base)))
-@@ -606,6 +712,27 @@ static int imx8mq_clocks_probe(struct platform_device *pdev)
- 		dev_err(dev, "failed to register hws for i.MX8MQ\n");
+@@ -607,6 +716,30 @@ static int imx8mq_clocks_probe(struct platform_device *pdev)
  		goto unregister_hws;
  	}
-+/*
+ 
 +	// enable all the clocks just for bringup
-+	if (imx_clk_init_on(np, hws)) {
-+		for (i = 0; i < ARRAY_SIZE(clks_init_on);  i++)
++	if (imx_clk_init_on(np)) {
++		for (i = 0; i < ARRAY_SIZE(clks_init_on); i++)
 +			clk_prepare_enable(hws[clks_init_on[i]]->clk);
 +	}
++
 +	check_assigned_clocks();
 +
 +	for (i = 0; i < ARRAY_SIZE(setup_clks); i++) {
 +		if (setup_clks[i].clk) {
-+			if (setup_clks[i].parent)
-+				clk_hw_set_parent(hws[setup_clks[i].clk], hws[setup_clks[i].parent]);
-+			if (setup_clks[i].rate)
-+				clk_set_rate(hws[setup_clks[i]->clk], setup_clks[i].rate);
++			if (setup_clks[i].parent) {
++        pr_info("set parent %d -> %d\n", setup_clks[i].clk, setup_clks[i].parent);
++				clk_set_parent(hws[setup_clks[i].clk]->clk, hws[setup_clks[i].parent]->clk);
++      }
++			if (setup_clks[i].rate) {
++        pr_info("set rate %d -> %d\n", setup_clks[i].clk, setup_clks[i].rate);
++				clk_set_rate(hws[setup_clks[i].clk]->clk, setup_clks[i].rate);
++      }
 +		}
 +	}
++
 +	// increase NOC clock to achieve best DDR access performance
-+	clk_set_rate(hws[IMX8MQ_CLK_NOC]->clk, clk_hw_get_rate(hws[IMX8MQ_SYS1_PLL_800M]));
++	clk_set_rate(hws[IMX8MQ_CLK_NOC]->clk, clk_get_rate(hws[IMX8MQ_SYS1_PLL_800M]->clk));
 +
-+*/
-+
- 
  	for (i = 0; i < ARRAY_SIZE(uart_clk_ids); i++) {
  		int index = uart_clk_ids[i];
+ 
 diff --git a/include/dt-bindings/clock/imx8mq-clock.h b/include/dt-bindings/clock/imx8mq-clock.h
 index 9b8045d75..d53d65521 100644
 --- a/include/dt-bindings/clock/imx8mq-clock.h
