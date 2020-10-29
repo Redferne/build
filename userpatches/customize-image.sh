@@ -19,11 +19,11 @@ BUILD_DESKTOP=$4
 Main() {
 
 	if [[ $BOARD == hummingboardpulse-imx8q ]] || [[ $BOARD == cubox-i ]]; then
+		InstallIperf3
 		InstallLibQMI
 		InstallLibMBIM
 		InstallModemManager
 		InstallSpeedtest
-		InstallIperf3
 	fi
 
 	case $RELEASE in
@@ -254,10 +254,10 @@ InstallLibQMI()
 	export LIB_DIR=$(pkg-config --variable=libdir gudev-1.0)
 	echo "Installing libqmi to LIBDIR: [${LIB_DIR}]"
 	apt remove -y --purge libqmi-*
-	wget -q https://gitlab.freedesktop.org/mobile-broadband/libqmi/-/archive/master/libqmi-master.tar.gz
+	wget -t 0 -q https://gitlab.freedesktop.org/mobile-broadband/libqmi/-/archive/master/libqmi-master.tar.gz
 	tar xf libqmi-master.tar.gz
 	cd libqmi-master
-	./autogen.sh --prefix=/usr --disable-maintainer-mode --libdir=${LIB_DIR} --libexecdir=${LIB_DIR}
+	./autogen.sh --prefix=/usr --enable-mbim-qmux --disable-maintainer-mode --libdir=${LIB_DIR} --libexecdir=${LIB_DIR}
 	VERSION=$(awk '/PACKAGE_VERSION =/{print $NF}' Makefile)
 	echo "Compiling libqmi-${VERSION}"
 	make --jobs
@@ -330,7 +330,7 @@ InstallLibMBIM()
 	export LIB_DIR=$(pkg-config --variable=libdir gudev-1.0)
 	echo "Installing libmbim to LIBDIR: [${LIB_DIR}]"
 	apt remove -y --purge libmbim-*
-	wget -q https://gitlab.freedesktop.org/mobile-broadband/libmbim/-/archive/master/libmbim-master.tar.gz
+	wget -t 0 -q https://gitlab.freedesktop.org/mobile-broadband/libmbim/-/archive/master/libmbim-master.tar.gz
 	tar xf libmbim-master.tar.gz
 	cd libmbim-master
 	./autogen.sh --prefix=/usr --disable-maintainer-mode --libdir=${LIB_DIR} --libexecdir=${LIB_DIR}
@@ -409,7 +409,7 @@ InstallModemManager()
 	export LIB_DIR=$(pkg-config --variable=libdir gudev-1.0)
 	echo "Installing modemmanager to LIBDIR: [${LIB_DIR}]"
 	apt remove -y --purge modemmanager
-	wget -q https://gitlab.freedesktop.org/mobile-broadband//ModemManager/-/archive/master/ModemManager-master.tar.gz
+	wget -t 0 -q https://gitlab.freedesktop.org/mobile-broadband//ModemManager/-/archive/master/ModemManager-master.tar.gz
 	tar xf ModemManager-master.tar.gz
 	cd ModemManager-master
 	./autogen.sh --prefix=/usr --disable-maintainer-mode --libdir=${LIB_DIR} --libexecdir=${LIB_DIR} --with-systemd-journal=yes --with-systemd-suspend-resume=no --with-at-command-via-dbus --with-udev-base-dir=/lib/udev --with-systemdsystemunitdir=/lib/systemd/system --with-dbus-sys-dir=/etc/dbus-1/system.d
@@ -468,20 +468,36 @@ InstallSpeedtest()
 InstallIperf3()
 {
 	cd /tmp
+	apt update
+	apt install -y checkinstall bash-completion build-essential git ne picocom autoconf automake autoconf-archive libtool libglib2.0-dev libgudev-1.0-dev gettext
 	export LIB_DIR=$(pkg-config --variable=libdir gudev-1.0)
 	echo "Installing iperf3 to LIBDIR: [${LIB_DIR}]"
 	apt update
 	apt install -y unzip
 	apt remove -y --purge iperf iperf3 libiperf0
-	wget -q https://github.com/esnet/iperf/archive/master.zip
+	wget -t 0 -q https://github.com/esnet/iperf/archive/master.zip
 	unzip -qo master.zip
 	cd iperf-master
 	./configure --prefix=/usr --libdir=${LIB_DIR} --libexecdir=${LIB_DIR}
 	VERSION=$(awk '/PACKAGE_VERSION =/{print $NF}' Makefile)
 	echo "Compiling iperf3-${VERSION}"
 	make --jobs
+
+	echo "Installing libiperf0..."
+	checkinstall -y -D --maintainer=nobody@nowhere.com --fstrans=yes --install=yes --pkgname libiperf0 --pkgversion=${VERSION} --nodoc \
+    --exclude=/usr/include,/usr/lib/pkgconfig,/usr/bin,/usr/share \
+
+    if [ "$?" -ne "0" ]; then
+    	echo "checkinstall libiperf0 failed!"
+    	exit 1
+    fi
+	echo "Copy .deb to /var/cache/apt/archives/"
+    mv libiperf0*.deb /var/cache/apt/archives/
+
 	echo "Installing iperf3..."
-    checkinstall -y -D --maintainer=nobody@nowhere.com --install=yes --pkgname iperf3 --pkgversion=${VERSION} --nodoc
+    checkinstall -y -D --maintainer=nobody@nowhere.com --install=yes --pkgname iperf3 --pkgversion=${VERSION} --nodoc \
+    --exclude=/usr/include,/usr/lib/pkgconfig,/usr/lib,${LIB_DIR} \
+
     if [ "$?" -ne "0" ]; then
     	echo "checkinstall iperf3 failed!"
     	exit 1
