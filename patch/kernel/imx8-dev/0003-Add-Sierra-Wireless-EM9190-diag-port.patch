@@ -1,0 +1,35 @@
+From e11cead2678516a33b8ff8e54391dd2b9de31289 Mon Sep 17 00:00:00 2001
+From: Redferne <mr.redferne@gmail.com>
+Date: Fri, 6 Nov 2020 17:44:42 +0100
+Subject: [PATCH] Add Sierra Wireless EM9190 diag port
+
+Signed-off-by: Redferne <mr.redferne@gmail.com>
+---
+ drivers/usb/serial/option.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/drivers/usb/serial/option.c b/drivers/usb/serial/option.c
+index eb5538a44..8a88654fb 100644
+--- a/drivers/usb/serial/option.c
++++ b/drivers/usb/serial/option.c
+@@ -558,6 +558,9 @@ static void option_instat_callback(struct urb *urb);
+ #define WETELECOM_PRODUCT_6802			0x6802
+ #define WETELECOM_PRODUCT_WMD300		0x6803
+ 
++/* Sierra Wireless products */
++#define SIERRA_VENDOR_ID          0x1199
++#define SIERRA_PRODUCT_EM9190     0x90d3
+ 
+ /* Device flags */
+ 
+@@ -2045,6 +2048,7 @@ static const struct usb_device_id option_ids[] = {
+ 	{ USB_DEVICE_INTERFACE_CLASS(0x305a, 0x1404, 0xff) },			/* GosunCn GM500 RNDIS */
+ 	{ USB_DEVICE_INTERFACE_CLASS(0x305a, 0x1405, 0xff) },			/* GosunCn GM500 MBIM */
+ 	{ USB_DEVICE_INTERFACE_CLASS(0x305a, 0x1406, 0xff) },			/* GosunCn GM500 ECM/NCM */
++  { USB_DEVICE_AND_INTERFACE_INFO(SIERRA_VENDOR_ID, SIERRA_PRODUCT_EM9190, 0xff, 0xff, 0x30) }, /* Sierra Wireless EM9190 DIAG */
+ 	{ } /* Terminating entry */
+ };
+ MODULE_DEVICE_TABLE(usb, option_ids);
+-- 
+Created with Armbian build tools https://github.com/armbian/build
+
