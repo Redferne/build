@@ -20,8 +20,8 @@ Main() {
 
 	if [[ $BOARD == hummingboardpulse-imx8q ]] || [[ $BOARD == cubox-i ]]; then
 		InstallIperf3
-		InstallLibQMI
 		InstallLibMBIM
+		InstallLibQMI
 		InstallModemManager
 		InstallSpeedtest
 	fi
@@ -469,7 +469,7 @@ InstallIperf3()
 {
 	cd /tmp
 	apt update
-	apt install -y checkinstall bash-completion build-essential git ne picocom autoconf automake autoconf-archive libtool libglib2.0-dev libgudev-1.0-dev gettext
+	apt install -y checkinstall avahi-daemon libnss-mdns bash-completion build-essential git ne picocom autoconf automake autoconf-archive libtool libglib2.0-dev libgudev-1.0-dev gettext
 	export LIB_DIR=$(pkg-config --variable=libdir gudev-1.0)
 	echo "Installing iperf3 to LIBDIR: [${LIB_DIR}]"
 	apt update
@@ -480,6 +480,7 @@ InstallIperf3()
 	cd iperf-master
 	./configure --prefix=/usr --libdir=${LIB_DIR} --libexecdir=${LIB_DIR}
 	VERSION=$(awk '/PACKAGE_VERSION =/{print $NF}' Makefile)
+        VERSION=$(echo $VERSION | sed 's/[^0-9.]*//g')
 	echo "Compiling iperf3-${VERSION}"
 	make --jobs
 
