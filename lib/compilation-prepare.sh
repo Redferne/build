@@ -24,18 +24,20 @@ compilation_prepare()
 		display_alert "Adjusting" "packaging" "info"
 		cd "$kerneldir" || exit
 		process_patch_file "${SRC}/patch/misc/general-packaging-5.10.y.patch" "applying"
-	else
-		if linux-version compare "${version}" ge 5.6; then
+	elif linux-version compare "${version}" ge 5.8.17 \
+		&& linux-version compare "${version}" le 5.9 \
+		|| linux-version compare "${version}" ge 5.9.2; then
 			display_alert "Adjusting" "packaging" "info"
 			cd "$kerneldir" || exit
-			process_patch_file "${SRC}/patch/misc/general-packaging-5.6.y.patch" "applying"
-		else
-			if linux-version compare "${version}" ge 5.3; then
-				display_alert "Adjusting" "packaging" "info"
-				cd "$kerneldir" || exit
-				process_patch_file "${SRC}/patch/misc/general-packaging-5.3.y.patch" "applying"
-			fi
-		fi
+			process_patch_file "${SRC}/patch/misc/general-packaging-5.8-9.y.patch" "applying"
+	elif linux-version compare "${version}" ge 5.6; then
+		display_alert "Adjusting" "packaging" "info"
+		cd "$kerneldir" || exit
+		process_patch_file "${SRC}/patch/misc/general-packaging-5.6.y.patch" "applying"
+	elif linux-version compare "${version}" ge 5.3; then
+		display_alert "Adjusting" "packaging" "info"
+		cd "$kerneldir" || exit
+		process_patch_file "${SRC}/patch/misc/general-packaging-5.3.y.patch" "applying"
 	fi
 
 	if [[ "${version}" == "4.19."* ]] && [[ "$LINUXFAMILY" == sunxi* || "$LINUXFAMILY" == meson64 || \
@@ -59,7 +61,8 @@ compilation_prepare()
 		process_patch_file "${SRC}/patch/misc/general-packaging-4.4.y-rk3399.patch" "applying"
 	fi
 
-	if [[ "${version}" == "4.4."* ]] && [[ "$LINUXFAMILY" == rockchip64 ]]; then
+	if [[ "${version}" == "4.4."* ]] && \
+	[[ "$LINUXFAMILY" == rockchip64 ]] || [[ "$LINUXFAMILY" == station* ]]; then
 		display_alert "Adjustin" "packaging" "info"
 		cd "$kerneldir" || exit
 		process_patch_file "${SRC}/patch/misc/general-packaging-4.4.y-rockchip64.patch" "applying"
@@ -129,7 +132,7 @@ compilation_prepare()
 	#
 	# Older versions have AUFS support with a patch
 
-	if linux-version compare "${version}" ge 5.1 && linux-version compare "${version}" le 5.8 && [ "$AUFS" == yes ]; then
+	if linux-version compare "${version}" ge 5.1 && linux-version compare "${version}" le 5.11 && [ "$AUFS" == yes ]; then
 
 		# attach to specifics tag or branch
 		local aufstag
@@ -419,6 +422,9 @@ compilation_prepare()
 		sed -i '/source "drivers\/net\/wireless\/ti\/Kconfig"/a source "drivers\/net\/wireless\/rtl8811cu\/Kconfig"' \
 		"$kerneldir/drivers/net/wireless/Kconfig"
 
+		# add support for K5.11+
+		process_patch_file "${SRC}/patch/misc/wireless-rtl8811cu.patch" "applying"
+
 	fi
 
 
@@ -458,7 +464,6 @@ compilation_prepare()
 		sed -i '/source "drivers\/net\/wireless\/ti\/Kconfig"/a source "drivers\/net\/wireless\/rtl8188eu\/Kconfig"' \
 		"$kerneldir/drivers/net/wireless/Kconfig"
 
-		# kernel 5.6 ->
 		process_patch_file "${SRC}/patch/misc/wireless-rtl8188eu.patch" "applying"
 
 	fi

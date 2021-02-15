@@ -21,7 +21,7 @@ USEALLCORES=yes # Use all CPU cores for compiling
 EXIT_PATCHING_ERROR="" # exit patching if failed
 [[ -z $HOST ]] && HOST="$BOARD" # set hostname to the board
 cd "${SRC}" || exit
-ROOTFSCACHE_VERSION=1
+ROOTFSCACHE_VERSION=2
 CHROOT_CACHE_VERSION=7
 BUILD_REPOSITORY_URL=$(improved_git remote get-url $(improved_git remote 2>/dev/null | grep origin) 2>/dev/null)
 BUILD_REPOSITORY_COMMIT=$(improved_git describe --match=d_e_a_d_b_e_e_f --always --dirty 2>/dev/null)
@@ -41,7 +41,7 @@ fi
 ROOT_MAPPER="armbian-root"
 
 [[ -z $ROOTFS_TYPE ]] && ROOTFS_TYPE=ext4 # default rootfs type is ext4
-[[ "ext4 f2fs btrfs nfs fel" != *$ROOTFS_TYPE* ]] && exit_with_error "Unknown rootfs type" "$ROOTFS_TYPE"
+[[ "ext4 f2fs btrfs xfs nfs fel" != *$ROOTFS_TYPE* ]] && exit_with_error "Unknown rootfs type" "$ROOTFS_TYPE"
 
 [[ -z $BTRFS_COMPRESSION ]] && BTRFS_COMPRESSION=zlib # default btrfs filesystem compression method is zlib
 [[ ! $BTRFS_COMPRESSION =~ zlib|lzo|zstd|none ]] && exit_with_error "Unknown btrfs compression method" "$BTRFS_COMPRESSION"
@@ -71,7 +71,7 @@ MAINLINE_KERNEL_DIR='linux-mainline'
 if [[ $USE_GITHUB_UBOOT_MIRROR == yes ]]; then
 	MAINLINE_UBOOT_SOURCE='https://github.com/RobertCNelson/u-boot'
 else
-	MAINLINE_UBOOT_SOURCE='git://git.denx.de/u-boot.git'
+	MAINLINE_UBOOT_SOURCE='https://gitlab.denx.de/u-boot/u-boot.git'
 fi
 MAINLINE_UBOOT_DIR='u-boot'
 
@@ -153,6 +153,8 @@ DEBOOTSTRAP_LIST=$(echo $DEBOOTSTRAP_LIST | sed -e 's,\\[trn],,g')
 PACKAGE_LIST="bc cpufrequtils device-tree-compiler fping fake-hwclock psmisc chrony parted dialog \
 		ncurses-term sysfsutils toilet figlet u-boot-tools usbutils openssh-server \
 		nocache debconf-utils python3-apt"
+
+[[ $ROOTFS_TYPE == xfs ]] && PACKAGE_LIST="$PACKAGE_LIST xfsprogs"
 
 # Non-essential packages for minimal build
 PACKAGE_LIST_ADDITIONAL="network-manager wireless-tools lsof htop mmc-utils wget nano sysstat net-tools resolvconf iozone3 jq libcrack2 cracklib-runtime curl"
@@ -280,6 +282,8 @@ if [[ $DOWNLOAD_MIRROR == china ]] ; then
 	DEBIAN_SECURTY='mirrors.tuna.tsinghua.edu.cn/debian-security'
 	UBUNTU_MIRROR='mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/'
 fi
+
+ARMBIAN_MIRROR='https://redirect.armbian.com'
 
 # For user override
 if [[ -f $USERPATCHES_PATH/lib.config ]]; then
