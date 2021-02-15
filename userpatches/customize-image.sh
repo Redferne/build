@@ -409,7 +409,7 @@ InstallModemManager()
 	export LIB_DIR=$(pkg-config --variable=libdir gudev-1.0)
 	echo "Installing modemmanager to LIBDIR: [${LIB_DIR}]"
 	apt remove -y --purge modemmanager
-	wget -t 0 -q https://gitlab.freedesktop.org/mobile-broadband//ModemManager/-/archive/master/ModemManager-master.tar.gz
+	wget -t 0 -q https://gitlab.freedesktop.org/mobile-broadband/ModemManager/-/archive/master/ModemManager-master.tar.gz
 	tar xf ModemManager-master.tar.gz
 	cd ModemManager-master
 	./autogen.sh --prefix=/usr --disable-maintainer-mode --libdir=${LIB_DIR} --libexecdir=${LIB_DIR} --with-systemd-journal=yes --with-systemd-suspend-resume=no --with-at-command-via-dbus --with-udev-base-dir=/lib/udev --with-systemdsystemunitdir=/lib/systemd/system --with-dbus-sys-dir=/etc/dbus-1/system.d
