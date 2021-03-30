@@ -17,7 +17,7 @@ fi
 
 CPUMIN=500000
 CPUMAX=1536000
-GOVERNOR=conservative
+GOVERNOR=ondemand
 
 case $BRANCH in
 	
@@ -32,9 +32,9 @@ case $BRANCH in
                 KERNELPATCHDIR='meson64-current'
         ;;
 
-        dev)
+        edge)
 		KERNELBRANCH='branch:linux-5.11.y'
-		KERNELPATCHDIR='meson64-dev'
+		KERNELPATCHDIR='meson64-edge'
         ;;
 
 esac
